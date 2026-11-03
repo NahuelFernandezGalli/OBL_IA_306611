@@ -1,0 +1,15 @@
+# Entornos virtuales (se recrean con `poetry install`)
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editores y sistema
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
