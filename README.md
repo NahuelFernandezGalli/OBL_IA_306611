@@ -17,6 +17,7 @@ Acrobot/
 ├── discretizer.py     discretización de la observación
 ├── qlearning.py       agente Q-Learning tabular, guardar/cargar modelos
 ├── train.py           entrenamiento y evaluación greedy
+├── sweep.py           barridos con varias semillas, en paralelo
 ├── models/            modelos entrenados (.pkl)
 ├── results/           registros de experimentos (JSON/CSV)
 └── figures/           gráficos para el informe
@@ -48,7 +49,9 @@ Desde `Acrobot/`, con el entorno activado (o anteponiendo `poetry run`):
 ```bash
 python baseline.py --episodes 50                  # línea base al azar
 python train.py --episodes 3000 --save-model      # Q-Learning con la configuración por defecto
-python train.py --bins 8 --omega1-max 6 --omega2-max 12 --alpha 0.2 --tag prueba
+python train.py --bins 10 --omega1-max 6 --omega2-max 12 --alpha 0.2 --tag prueba
+python sweep.py bins                              # un experimento: variantes x 5 semillas
+python sweep.py bins --summary                    # solo la tabla resumen de lo ya corrido
 ```
 
 `python train.py --help` lista todos los parámetros. Cada corrida queda registrada en `results/` y, con `--save-model`, el modelo queda en `models/<run_id>.pkl`. Para cargarlo: `agent, discretizer = qlearning.load_model(ruta)`.

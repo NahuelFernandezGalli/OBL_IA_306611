@@ -5,7 +5,7 @@
 - Al final hace una evaluación greedy más larga, que es la métrica para comparar corridas.
 - Guarda la corrida en results/ y, si se pide, el modelo en models/.
 
-Uso: python train.py --episodes 3000 --bins 10 --alpha 0.1 --gamma 0.99 --save-model
+Uso: python train.py --episodes 3000 --bins 8 8 12 12 --alpha 0.1 --gamma 0.99 --save-model
 """
 
 import argparse
@@ -30,8 +30,10 @@ DEFAULT_CONFIG = {
     "seed": 0,
     "episodes": 3000,
     "max_steps": 700,
-    "discretization": {"representation": "angles", "bins": 10,
-                       "omega1_max": OMEGA1_MAX, "omega2_max": OMEGA2_MAX},
+    # Discretización elegida en los experimentos A-C (DECISIONES.md, D-12 y D-13):
+    # bins (θ1, θ2, ω1, ω2) = (8, 8, 12, 12) y velocidades en la mitad de los límites del entorno.
+    "discretization": {"representation": "angles", "bins": [8, 8, 12, 12],
+                       "omega1_max": OMEGA1_MAX / 2, "omega2_max": OMEGA2_MAX / 2},
     "agent": {"alpha": 0.1, "gamma": 0.99, "epsilon_start": 1.0,
               "epsilon_min": 0.05, "epsilon_decay": 0.995},
     "eval": {"every": 250, "episodes": 20, "final_episodes": 100},
@@ -88,8 +90,9 @@ def build(config):
     return agent, discretizer
 
 
-def train(config, save=False, tag=None, verbose=True):
-    """Entrena según config, registra la corrida y devuelve (run_id, métricas, agente, discretizador)."""
+def run_training(config, verbose=True):
+    """Entrena y evalúa según config, sin escribir nada en disco.
+    Devuelve un dict con el agente, el discretizador, las métricas, los episodios y la curva."""
     agent, discretizer = build(config)
     train_env, eval_env = make_env(config["max_steps"]), make_env(config["max_steps"])
     ev = config["eval"]
@@ -122,25 +125,41 @@ def train(config, save=False, tag=None, verbose=True):
     metrics["n_states"] = discretizer.n_states
     metrics["train_time_s"] = round(train_time, 2)
     metrics["train_last100_mean_steps"] = float(np.mean([e["steps"] for e in episodes[-100:]]))
+    # Media de los pasos greedy a lo largo de la curva: resume qué tan rápido aprende
+    # (dos corridas con el mismo resultado final se distinguen por cuánto tardaron en llegar).
+    metrics["curve_mean_steps"] = float(np.mean([c["mean_steps"] for c in curve])) if curve else float("nan")
+    return {"agent": agent, "discretizer": discretizer, "metrics": metrics,
+            "episodes": episodes, "curve": curve, "elapsed": elapsed}
 
+
+def log_run(result, config, tag=None, save=False):
+    """Registra en results/ una corrida devuelta por run_training y, si save=True, guarda el modelo."""
     run_id = new_run_id(tag or config["algorithm"])
     model_path = None
     if save:
         MODELS_DIR.mkdir(exist_ok=True)
         model_path = MODELS_DIR / f"{run_id}.pkl"
-        save_model(model_path, agent, discretizer, config)
-    save_run(run_id, config, metrics, elapsed, episodes,
-             extra={"eval_curve": curve, "model": model_path.name if model_path else None})
+        save_model(model_path, result["agent"], result["discretizer"], config)
+    save_run(run_id, config, result["metrics"], result["elapsed"], result["episodes"],
+             extra={"eval_curve": result["curve"], "model": model_path.name if model_path else None})
+    return run_id
+
+
+def train(config, save=False, tag=None, verbose=True):
+    """Entrena, registra la corrida y devuelve (run_id, métricas, agente, discretizador)."""
+    result = run_training(config, verbose)
+    run_id = log_run(result, config, tag, save)
     if verbose:
-        print(run_id, metrics)
-    return run_id, metrics, agent, discretizer
+        print(run_id, result["metrics"])
+    return run_id, result["metrics"], result["agent"], result["discretizer"]
 
 
 def config_from_args(args):
     config = copy.deepcopy(DEFAULT_CONFIG)
     config["seed"] = args.seed
     config["episodes"] = args.episodes
-    config["discretization"].update(representation=args.representation, bins=args.bins,
+    bins = args.bins[0] if len(args.bins) == 1 else args.bins
+    config["discretization"].update(representation=args.representation, bins=bins,
                                     omega1_max=args.omega1_max, omega2_max=args.omega2_max)
     config["agent"].update(alpha=args.alpha, gamma=args.gamma, epsilon_min=args.epsilon_min,
                            epsilon_decay=args.epsilon_decay)
@@ -152,9 +171,10 @@ if __name__ == "__main__":
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--episodes", type=int, default=DEFAULT_CONFIG["episodes"])
     p.add_argument("--representation", choices=["angles", "raw"], default="angles")
-    p.add_argument("--bins", type=int, default=10)
-    p.add_argument("--omega1-max", type=float, default=OMEGA1_MAX)
-    p.add_argument("--omega2-max", type=float, default=OMEGA2_MAX)
+    # Un número (igual en todas las dimensiones) o uno por dimensión: --bins 8 8 12 12
+    p.add_argument("--bins", type=int, nargs="+", default=DEFAULT_CONFIG["discretization"]["bins"])
+    p.add_argument("--omega1-max", type=float, default=OMEGA1_MAX / 2)
+    p.add_argument("--omega2-max", type=float, default=OMEGA2_MAX / 2)
     p.add_argument("--alpha", type=float, default=0.1)
     p.add_argument("--gamma", type=float, default=0.99)
     p.add_argument("--epsilon-min", type=float, default=0.05)

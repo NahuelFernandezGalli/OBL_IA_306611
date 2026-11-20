@@ -1,0 +1,5 @@
+variant,n_seeds,n_states,mean_steps_mean,mean_steps_std,success_rate_mean,success_rate_std,curve_mean_steps_mean,curve_mean_steps_std,visited_states_mean,visited_states_std,train_time_s_mean,train_time_s_std
+angulos_10,5,10000,166.534,12.417,0.998,0.004,236.423,10.564,0.375,0.004,280.14,3.023
+crudo_4,5,4096,330.486,173.519,0.82,0.345,316.679,21.066,0.335,0.002,385.676,8.405
+crudo_6,5,46656,250.22,27.056,0.996,0.005,292.216,13.321,0.119,0.001,355.596,3.591
+crudo_10,5,1000000,284.138,40.801,0.964,0.038,370.673,6.921,0.021,0.0,396.248,2.263
