@@ -1,0 +1,32 @@
+{
+  "run_id": "random_20261119-182717_e5db",
+  "timestamp": "2026-11-19T18:27:17",
+  "elapsed_s": 1.57,
+  "config": {
+    "algorithm": "random",
+    "episodes": 50,
+    "seed": 0,
+    "max_steps": 700
+  },
+  "metrics": {
+    "mean_reward": -700.0,
+    "std_reward": 0.0,
+    "success_rate": 0.0,
+    "mean_steps": 700.0,
+    "seconds_per_episode": 0.03141278800088912
+  },
+  "velocity_stats": {
+    "omega1": {
+      "min": -4.883819103240967,
+      "p1": -3.3577133870124816,
+      "p99": 3.3282579040527347,
+      "max": 4.951920509338379
+    },
+    "omega2": {
+      "min": -8.614919662475586,
+      "p1": -5.878601560592651,
+      "p99": 5.520647525787359,
+      "max": 9.25222396850586
+    }
+  }
+}
