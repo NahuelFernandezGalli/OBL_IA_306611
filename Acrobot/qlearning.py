@@ -9,7 +9,7 @@ from discretizer import Discretizer
 
 class QLearningAgent:
     def __init__(self, n_states, n_actions=3, alpha=0.1, gamma=0.99,
-                 epsilon_start=1.0, epsilon_min=0.05, epsilon_decay=0.995, seed=0):
+                 epsilon_start=1.0, epsilon_min=0.05, epsilon_decay=0.995, q_init=0.0, seed=0):
         self.n_states = n_states
         self.n_actions = n_actions
         self.alpha = alpha
@@ -18,10 +18,13 @@ class QLearningAgent:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = epsilon_decay
         self.epsilon = epsilon_start
+        self.q_init = q_init
         self.rng = np.random.default_rng(seed)
-        # Q en 0: como todas las recompensas son <= 0, es una inicialización optimista
-        # y empuja al agente a probar las acciones que todavía no probó.
-        self.Q = np.zeros((n_states, n_actions))
+        # Valor inicial de toda la tabla. Con q_init = 0 la inicialización es optimista
+        # (todas las recompensas son <= 0, así que todo valor real es negativo) y empuja a
+        # probar acciones nuevas. Con q_init <= -1/(1-γ) es pesimista y la exploración
+        # sale solo de ε-greedy (ver DECISIONES.md, D-17).
+        self.Q = np.full((n_states, n_actions), float(q_init))
 
     def greedy_action(self, s):
         """argmax de Q(s, ·), con desempate al azar (si no, siempre ganaría la acción 0)."""
@@ -54,6 +57,7 @@ class QLearningAgent:
             "epsilon_start": self.epsilon_start,
             "epsilon_min": self.epsilon_min,
             "epsilon_decay": self.epsilon_decay,
+            "q_init": self.q_init,
         }
 
 

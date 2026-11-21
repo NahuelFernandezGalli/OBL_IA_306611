@@ -5,7 +5,8 @@
 - Al final hace una evaluación greedy más larga, que es la métrica para comparar corridas.
 - Guarda la corrida en results/ y, si se pide, el modelo en models/.
 
-Uso: python train.py --episodes 3000 --bins 8 8 12 12 --alpha 0.1 --gamma 0.99 --save-model
+Uso: python train.py --save-model                 (configuración final, D-18)
+     python train.py --episodes 3000 --bins 10 --alpha 0.2 --tag prueba
 """
 
 import argparse
@@ -24,18 +25,23 @@ MODELS_DIR = Path(__file__).parent / "models"
 # Semillas de evaluación: fijas y distintas de las de entrenamiento, para que todas las
 # configuraciones se comparen sobre los mismos estados iniciales.
 EVAL_SEED_BASE = 1_000_000
+# Semillas de prueba: estados iniciales que no se usaron para elegir nada, para medir
+# el modelo final sin el sesgo de haberlo elegido con las semillas de evaluación.
+TEST_SEED_BASE = 2_000_000
 
 DEFAULT_CONFIG = {
     "algorithm": "qlearning",
     "seed": 0,
-    "episodes": 3000,
+    # Configuración final (DECISIONES.md): q_init = -100 = -1/(1-γ), inicialización pesimista
+    # por indicación del docente (D-17); el resto, re-ajustado para esa inicialización (D-18).
+    "episodes": 40000,
     "max_steps": 700,
-    # Discretización elegida en los experimentos A-C (DECISIONES.md, D-12 y D-13):
-    # bins (θ1, θ2, ω1, ω2) = (8, 8, 12, 12) y velocidades en la mitad de los límites del entorno.
-    "discretization": {"representation": "angles", "bins": [8, 8, 12, 12],
+    # Ángulos, bins (θ1, θ2, ω1, ω2) = (6, 6, 10, 10) y velocidades en la mitad de los
+    # límites del entorno (D-06, D-12 y D-18).
+    "discretization": {"representation": "angles", "bins": [6, 6, 10, 10],
                        "omega1_max": OMEGA1_MAX / 2, "omega2_max": OMEGA2_MAX / 2},
-    "agent": {"alpha": 0.1, "gamma": 0.99, "epsilon_start": 1.0,
-              "epsilon_min": 0.05, "epsilon_decay": 0.995},
+    "agent": {"alpha": 0.5, "gamma": 0.99, "epsilon_start": 1.0,
+              "epsilon_min": 0.01, "epsilon_decay": 0.999, "q_init": -100.0},
     "eval": {"every": 250, "episodes": 20, "final_episodes": 100},
 }
 
@@ -64,9 +70,9 @@ def run_episode(env, agent, discretizer, learn, seed=None):
     return total, steps, terminated, velocities
 
 
-def evaluate(env, agent, discretizer, n_episodes):
+def evaluate(env, agent, discretizer, n_episodes, seed_base=EVAL_SEED_BASE):
     """Evalúa la política greedy sobre n_episodes estados iniciales fijos."""
-    results = [run_episode(env, agent, discretizer, learn=False, seed=EVAL_SEED_BASE + i)
+    results = [run_episode(env, agent, discretizer, learn=False, seed=seed_base + i)
                for i in range(n_episodes)]
     steps = np.array([r[1] for r in results])
     success = np.array([r[2] for r in results])
@@ -120,8 +126,9 @@ def run_training(config, verbose=True):
     train_env.close()
     eval_env.close()
 
-    # Fracción de celdas de la tabla que el agente visitó al menos una vez (alguna Q distinta de 0).
-    metrics["visited_states"] = float(np.mean(np.any(agent.Q != 0, axis=1)))
+    # Fracción de celdas de la tabla que el agente visitó al menos una vez
+    # (alguna Q distinta del valor inicial).
+    metrics["visited_states"] = float(np.mean(np.any(agent.Q != agent.q_init, axis=1)))
     metrics["n_states"] = discretizer.n_states
     metrics["train_time_s"] = round(train_time, 2)
     metrics["train_last100_mean_steps"] = float(np.mean([e["steps"] for e in episodes[-100:]]))
@@ -162,11 +169,12 @@ def config_from_args(args):
     config["discretization"].update(representation=args.representation, bins=bins,
                                     omega1_max=args.omega1_max, omega2_max=args.omega2_max)
     config["agent"].update(alpha=args.alpha, gamma=args.gamma, epsilon_min=args.epsilon_min,
-                           epsilon_decay=args.epsilon_decay)
+                           epsilon_decay=args.epsilon_decay, q_init=args.q_init)
     return config
 
 
-if __name__ == "__main__":
+def parse_args(argv=None):
+    """Parámetros de línea de comandos; los valores por defecto salen de DEFAULT_CONFIG."""
     p = argparse.ArgumentParser()
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--episodes", type=int, default=DEFAULT_CONFIG["episodes"])
@@ -175,11 +183,16 @@ if __name__ == "__main__":
     p.add_argument("--bins", type=int, nargs="+", default=DEFAULT_CONFIG["discretization"]["bins"])
     p.add_argument("--omega1-max", type=float, default=OMEGA1_MAX / 2)
     p.add_argument("--omega2-max", type=float, default=OMEGA2_MAX / 2)
-    p.add_argument("--alpha", type=float, default=0.1)
-    p.add_argument("--gamma", type=float, default=0.99)
-    p.add_argument("--epsilon-min", type=float, default=0.05)
-    p.add_argument("--epsilon-decay", type=float, default=0.995)
+    p.add_argument("--alpha", type=float, default=DEFAULT_CONFIG["agent"]["alpha"])
+    p.add_argument("--gamma", type=float, default=DEFAULT_CONFIG["agent"]["gamma"])
+    p.add_argument("--epsilon-min", type=float, default=DEFAULT_CONFIG["agent"]["epsilon_min"])
+    p.add_argument("--epsilon-decay", type=float, default=DEFAULT_CONFIG["agent"]["epsilon_decay"])
+    p.add_argument("--q-init", type=float, default=DEFAULT_CONFIG["agent"]["q_init"])
     p.add_argument("--save-model", action="store_true")
     p.add_argument("--tag", default=None)
-    args = p.parse_args()
+    return p.parse_args(argv)
+
+
+if __name__ == "__main__":
+    args = parse_args()
     train(config_from_args(args), save=args.save_model, tag=args.tag)

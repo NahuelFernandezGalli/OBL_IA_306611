@@ -19,7 +19,7 @@ import numpy as np
 
 from discretizer import OMEGA1_MAX, OMEGA2_MAX
 from experiment_log import RESULTS_DIR
-from train import DEFAULT_CONFIG, log_run, run_training
+from train import log_run, run_training
 
 SEEDS = [0, 1, 2, 3, 4]
 EPISODES = 5000
@@ -41,7 +41,36 @@ def disc(**kwargs):
     return {"discretization": kwargs}
 
 
-# Cada experimento es una lista de (nombre de la variante, cambios sobre DEFAULT_CONFIG).
+def agent(**kwargs):
+    return {"agent": kwargs}
+
+
+# Base congelada de los experimentos: la configuración inicial de train.py (10 bins,
+# rangos teóricos, α = 0.1, γ = 0.99, ε de 1 a 0.05 con decay 0.995). No depende de
+# DEFAULT_CONFIG, que cambia a medida que se toman decisiones, para que cada
+# experimento se pueda volver a correr y dé exactamente los mismos números.
+BASE = {
+    "algorithm": "qlearning",
+    "seed": 0,
+    "episodes": EPISODES,
+    "max_steps": 700,
+    "discretization": {"representation": "angles", "bins": 10,
+                       "omega1_max": OMEGA1_MAX, "omega2_max": OMEGA2_MAX},
+    "agent": {"alpha": 0.1, "gamma": 0.99, "epsilon_start": 1.0,
+              "epsilon_min": 0.05, "epsilon_decay": 0.995},
+    "eval": {"every": 250, "episodes": 20, "final_episodes": 100},
+}
+
+# Discretización elegida en los experimentos A-C (D-12 y D-13).
+CHOSEN_DISC = disc(bins=[8, 8, 12, 12], omega1_max=OMEGA1_MAX / 2, omega2_max=OMEGA2_MAX / 2)
+
+
+def chosen(**agent_kwargs):
+    """Discretización elegida más cambios en el agente."""
+    return merge(CHOSEN_DISC, agent(**agent_kwargs))
+
+
+# Cada experimento es una lista de (nombre de la variante, cambios sobre BASE).
 EXPERIMENTS = {
     # A: rangos de las velocidades (10 bins por dimensión, ángulos).
     "rangos": [
@@ -69,6 +98,82 @@ EXPERIMENTS = {
         ("crudo_6", disc(representation="raw", bins=6, omega1_max=OMEGA1_MAX / 2, omega2_max=OMEGA2_MAX / 2)),
         ("crudo_10", disc(representation="raw", bins=10, omega1_max=OMEGA1_MAX / 2, omega2_max=OMEGA2_MAX / 2)),
     ],
+    # Hiperparámetros, con la discretización elegida.
+    # Se cambia uno por vez respecto de α = 0.1, γ = 0.99, ε: 1 -> 0.05 con decay 0.995.
+    "alpha": [(str(a), chosen(alpha=a)) for a in [0.05, 0.1, 0.2, 0.3, 0.5]],
+    "gamma": [(str(g), chosen(gamma=g)) for g in [0.9, 0.95, 0.99, 0.999, 1.0]],
+    # decay 0.99 / 0.995 / 0.999: ε llega al piso de 0.05 cerca del episodio 300 / 600 / 3000.
+    "epsilon": [
+        ("decay0.99_min0.05", chosen(epsilon_decay=0.99, epsilon_min=0.05)),
+        ("decay0.995_min0.05", chosen(epsilon_decay=0.995, epsilon_min=0.05)),
+        ("decay0.999_min0.05", chosen(epsilon_decay=0.999, epsilon_min=0.05)),
+        ("decay0.995_min0", chosen(epsilon_decay=0.995, epsilon_min=0.0)),
+        ("decay0.995_min0.01", chosen(epsilon_decay=0.995, epsilon_min=0.01)),
+        ("decay0.995_min0.1", chosen(epsilon_decay=0.995, epsilon_min=0.1)),
+    ],
+    # Combinación de los dos mejores valores de cada barrido anterior (interacciones).
+    # Con decay 0.9995, ε todavía vale ~0.08 al episodio 5000 (no llega al piso).
+    "combinacion": [
+        (f"a{a}_d{d}_g{g}", chosen(alpha=a, epsilon_decay=d, gamma=g))
+        for a in [0.1, 0.2] for d in [0.999, 0.9995] for g in [0.99, 0.999]
+    ],
+    # Cantidad de episodios, con la mejor combinación (α = 0.1, γ = 0.99, decay 0.999).
+    "episodios": [
+        (str(n), merge(chosen(alpha=0.1, gamma=0.99, epsilon_decay=0.999), {"episodes": n}))
+        for n in [5000, 10000, 20000]
+    ],
+    # Inicialización de la tabla Q (indicación del docente: sin inicialización optimista).
+    # Con recompensa -1 por paso, todo valor real está entre -1/(1-γ) = -100 y 0:
+    # Q0 = 0 es optimista, -50 es intermedio y -100 es pesimista (el peor valor posible).
+    "inicializacion": [
+        (str(q), chosen(alpha=0.1, gamma=0.99, epsilon_decay=0.999, q_init=q))
+        for q in [0.0, -50.0, -100.0]
+    ],
+    # ¿La inicialización pesimista aprende si se le da más tiempo y más exploración?
+    "pesimista_larga": [
+        (f"d{d}", merge(chosen(alpha=0.1, gamma=0.99, epsilon_decay=d, q_init=-100.0), {"episodes": 20000}))
+        for d in [0.999, 0.9998]
+    ],
+    # Re-ajuste con Q0 = -100 (decisión del 2026-11-20, D-17). Con inicialización pesimista
+    # el aprendizaje depende de que el valor de las llegadas al objetivo se propague hacia
+    # atrás, así que los hiperparámetros elegidos con Q0 = 0 pueden no servir.
+    # Presupuesto: 10000 episodios. Se ajusta uno por vez, en este orden: α, bins, ε.
+    "pes_alpha": [
+        (str(a), merge(chosen(alpha=a, gamma=0.99, epsilon_decay=0.999, q_init=-100.0), {"episodes": 10000}))
+        for a in [0.1, 0.2, 0.3, 0.5]
+    ],
+    # Continuación: en pes_alpha el resultado mejoraba hasta el valor más alto probado.
+    "pes_alpha_alto": [
+        (str(a), merge(chosen(alpha=a, gamma=0.99, epsilon_decay=0.999, q_init=-100.0), {"episodes": 10000}))
+        for a in [0.7, 0.9, 1.0]
+    ],
+    # Bins con Q0 = -100 y α = 0.5 (elegido en pes_alpha). Con inicialización pesimista,
+    # una tabla más chica tiene menos celdas por las que propagar el valor del objetivo.
+    "pes_bins": [
+        (name, merge(CHOSEN_DISC, merge(disc(bins=b), merge(
+            agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, q_init=-100.0), {"episodes": 10000}))))
+        for name, b in [("6", 6), ("6_6_10_10", [6, 6, 10, 10]), ("8", 8), ("8_8_12_12", [8, 8, 12, 12])]
+    ],
+    # Continuación: en pes_bins mejoraba hasta la tabla más chica probada (6 bins).
+    "pes_bins_gruesos": [
+        (name, merge(CHOSEN_DISC, merge(disc(bins=b), merge(
+            agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, q_init=-100.0), {"episodes": 10000}))))
+        for name, b in [("4", 4), ("5", 5)]
+    ],
+    # ε con Q0 = -100, α = 0.5 y bins (6, 6, 10, 10) (elegidos en pes_alpha y pes_bins).
+    "pes_epsilon": [
+        (name, merge(CHOSEN_DISC, merge(disc(bins=[6, 6, 10, 10]), merge(
+            agent(alpha=0.5, gamma=0.99, epsilon_decay=d, epsilon_min=m, q_init=-100.0), {"episodes": 10000}))))
+        for name, d, m in [("decay0.99_min0.05", 0.99, 0.05), ("decay0.995_min0.05", 0.995, 0.05),
+                           ("decay0.999_min0.05", 0.999, 0.05), ("decay0.999_min0.01", 0.999, 0.01)]
+    ],
+    # Cantidad de episodios con la configuración final para Q0 = -100. La de 10000 episodios
+    # es la variante decay0.999_min0.01 de pes_epsilon (mismas semillas, mismos números).
+    "pes_episodios": [
+        (str(n), merge(CHOSEN_DISC, merge(disc(bins=[6, 6, 10, 10]), merge(
+            agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, epsilon_min=0.01, q_init=-100.0), {"episodes": n}))))
+        for n in [20000, 40000]
+    ],
 }
 
 
@@ -76,8 +181,10 @@ def run_one(job):
     """Trabajo de un proceso: entrena una variante con una semilla y devuelve el resultado
     (sin el agente, que no hace falta mandar de vuelta)."""
     experiment, variant, seed, overrides = job
-    config = merge(DEFAULT_CONFIG, overrides)
-    config.update(seed=seed, episodes=EPISODES, experiment=experiment, variant=variant)
+    config = merge(BASE, overrides)
+    # Presupuesto fijo de EPISODES, salvo que la variante defina el suyo.
+    config.update(seed=seed, episodes=overrides.get("episodes", EPISODES),
+                  experiment=experiment, variant=variant)
     result = run_training(config, verbose=False)
     result.pop("agent")
     return config, result
@@ -86,8 +193,7 @@ def run_one(job):
 def run_experiment(name):
     jobs = [(name, variant, seed, overrides)
             for variant, overrides in EXPERIMENTS[name] for seed in SEEDS]
-    print(f"{name}: {len(jobs)} corridas ({len(EXPERIMENTS[name])} variantes x {len(SEEDS)} semillas), "
-          f"{EPISODES} episodios cada una")
+    print(f"{name}: {len(jobs)} corridas ({len(EXPERIMENTS[name])} variantes x {len(SEEDS)} semillas)")
     start = time.perf_counter()
     # Los procesos entrenan; solo el proceso principal escribe en results/,
     # así no hay dos procesos escribiendo runs.csv a la vez.

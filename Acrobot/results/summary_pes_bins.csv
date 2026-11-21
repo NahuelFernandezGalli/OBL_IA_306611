@@ -1,0 +1,5 @@
+variant,n_seeds,n_states,mean_steps_mean,mean_steps_std,success_rate_mean,success_rate_std,curve_mean_steps_mean,curve_mean_steps_std,visited_states_mean,visited_states_std,train_time_s_mean,train_time_s_std
+6,5,1296,255.39,63.836,1.0,0.0,383.487,14.24,0.526,0.015,825.114,8.803
+6_6_10_10,5,3600,255.97,45.389,0.996,0.005,387.139,20.935,0.379,0.005,769.542,8.3
+8,5,4096,312.64,76.227,0.974,0.024,419.148,15.455,0.387,0.007,882.102,17.269
+8_8_12_12,5,9216,348.632,62.607,0.928,0.063,487.603,16.408,0.285,0.004,958.976,22.903

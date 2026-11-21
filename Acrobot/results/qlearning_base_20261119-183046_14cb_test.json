@@ -1,0 +1,12 @@
+{
+  "model": "qlearning_base_20261119-183046_14cb.pkl",
+  "test_episodes": 1000,
+  "test_seed_base": 2000000,
+  "mean_reward": -198.81,
+  "mean_steps": 199.8,
+  "std_steps": 87.55892872802865,
+  "success_rate": 0.99,
+  "mean_steps_success": 194.74747474747474,
+  "omega1_abs_p99": 4.887271761894231,
+  "omega2_abs_p99": 10.09047026634218
+}
