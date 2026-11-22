@@ -30,6 +30,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-16](#d-16-base-congelada-para-los-experimentos) | Acrobot | Base congelada para los experimentos | Vigente |
 | [D-17](#d-17-inicialización-de-la-tabla-q) | Acrobot | Inicialización de la tabla Q: Q₀ = −100 (pesimista) | Vigente |
 | [D-18](#d-18-re-ajuste-de-hiperparámetros-con-q₀--100) | Acrobot | Re-ajuste de hiperparámetros con Q₀ = −100 y modelo final | Vigente |
+| [D-19](#d-19-gráficos-con-matplotlib-generados-desde-results) | General | Gráficos con matplotlib, generados desde `results/` | Vigente |
 
 ---
 
@@ -57,6 +58,20 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Contexto:** la letra pide un registro completo de resultados, con parámetros y tiempos de ejecución, y gráficos en el informe.
 - **Decisión:** cada corrida genera `results/<run_id>.json` (configuración completa, semilla, métricas finales, tiempo). En Acrobot genera además `results/<run_id>_episodes.csv` (una fila por episodio). `results/runs.csv` funciona como índice, con una fila por corrida (o por partida, en Connect Four). El detalle está en el [README](../README.md#registro-de-experimentos).
 - **Justificación:** el JSON hace que cada corrida se pueda reproducir. El CSV por episodio permite graficar curvas de aprendizaje. El índice permite comparar configuraciones sin abrir cada archivo.
+
+### D-19: Gráficos con matplotlib, generados desde `results/`
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** la letra pide gráficos claros y comentados en el informe. Los proyectos de la cátedra no traen ninguna librería de gráficos.
+- **Decisión:**
+  - Se agrega **`matplotlib>=3.9,<3.10`** (instalada la 3.9.4) a `Acrobot/` y a `ConnectFour/` con `poetry add`.
+  - Las figuras se generan con un script por proyecto (`plots.py`) que **lee `results/`** y guarda en `figures/` en PNG a 150 dpi, con el nombre del experimento. El notebook de entrega llama a ese script; no grafica desde variables en memoria.
+  - Cada algoritmo o variante tiene un color y un estilo de línea fijos, definidos una sola vez, para que se reconozca en todas las figuras y se lea también impreso en blanco y negro.
+- **Alternativas:**
+  - Otras librerías (seaborn, plotly): agregan dependencias sin aportar nada necesario para estas figuras.
+  - La versión más nueva de matplotlib (3.10+): exige Python ≥ 3.10 y Poetry no la acepta con el `requires-python = ">=3.9"` de la cátedra, salvo que se cambie ese rango. La 3.9 es compatible con todo el rango y con `numpy<2`.
+  - Graficar desde el notebook con variables en memoria: las figuras dependerían de haber corrido todo en una misma sesión y no se podrían rastrear hasta su registro.
+- **Justificación:** matplotlib es la librería estándar con `numpy`. Generar las figuras desde los archivos de `results/` hace que cada figura se pueda reproducir y rastrear hasta las corridas que la originan (D-03), sin volver a entrenar.
 
 ## ACROBAT (Acrobot)
 
