@@ -58,14 +58,14 @@ python evaluate_model.py models/<run_id>.pkl --render 3   # evaluar y ver el mod
 
 Modelo final de Q-Learning: `models/qlearning_final_pes_20261120-204635_c4c6.pkl`, con inicialización pesimista Q₀ = −100 por indicación del docente (218 pasos medios y 99.9 % de éxito sobre 1000 estados de prueba). `models/qlearning_final_20261120-154018_3f81.pkl` es la referencia con Q₀ = 0 (142 pasos y 99.6 %). El porqué de cada decisión está en `docs/DECISIONES.md`.
 
-`python train.py --help` lista todos los parámetros. Cada corrida queda registrada en `results/` y, con `--save-model`, el modelo queda en `models/<run_id>.pkl`. Para cargarlo: `agent, discretizer = qlearning.load_model(ruta)`.
+`python train.py --help` lista todos los parámetros. Dyna-Q: `python train.py --algorithm dynaq --n-planning 10`. Verificaciones de Dyna-Q: `python test_dynaq.py`. Cada corrida queda registrada en `results/` y, con `--save-model`, el modelo queda en `models/<run_id>.pkl`. Para cargarlo: `agent, discretizer = qlearning.load_model(ruta)`.
 
 ## Registro de experimentos
 
 Cada corrida se guarda en `results/` del proyecto correspondiente:
 
 - `results/<run_id>.json`: configuración completa (hiperparámetros, discretización, semilla), métricas finales y tiempo de ejecución.
-- `results/<run_id>_episodes.csv` (Acrobot): una fila por episodio con recompensa, pasos y si se alcanzó el objetivo.
+- `results/<run_id>_episodes.csv` (Acrobot): una fila por episodio con recompensa, pasos, si se alcanzó el objetivo, ε y `elapsed_s` (tiempo de entrenamiento acumulado, sin las evaluaciones; existe desde la fase 2, D-21).
 - `results/runs.csv`: índice con una fila por corrida (configuración resumida y métricas), usado para comparar y graficar.
 
 En Connect Four cada fila de `results/runs.csv` es una partida: agentes, profundidad, heurística, quién empieza, resultado y tiempo por jugada.

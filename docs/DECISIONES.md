@@ -31,6 +31,12 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-17](#d-17-inicialización-de-la-tabla-q) | Acrobot | Inicialización de la tabla Q: Q₀ = −100 (pesimista) | Vigente |
 | [D-18](#d-18-re-ajuste-de-hiperparámetros-con-q₀--100) | Acrobot | Re-ajuste de hiperparámetros con Q₀ = −100 y modelo final | Vigente |
 | [D-19](#d-19-gráficos-con-matplotlib-generados-desde-results) | General | Gráficos con matplotlib, generados desde `results/` | Vigente |
+| [D-20](#d-20-implementación-de-dyna-q) | Acrobot | Implementación de Dyna-Q | Vigente |
+| [D-21](#d-21-tiempo-de-entrenamiento-por-episodio-y-comparación-en-el-mismo-lote) | Acrobot | Tiempo por episodio y comparación en el mismo lote | Vigente |
+| [D-22](#d-22-barrido-de-n-pasos-de-planning) | Acrobot | Barrido de *n* (pasos de *planning*) | Vigente (resultados; α se revisa en D-24) |
+| [D-23](#d-23-medición-del-aliasing-del-modelo) | Acrobot | Medición del *aliasing* del modelo | Vigente |
+| [D-24](#d-24-α-con-dyna-q-α-bajo-y-n-chico) | Acrobot | α con Dyna-Q: α bajo y *n* chico | Vigente (resultados; la elección va en D-25) |
+| [D-25](#d-25-configuración-y-modelo-final-de-dyna-q) | Acrobot | Configuración y modelo final de Dyna-Q | Vigente |
 
 ---
 
@@ -170,6 +176,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Primer modelo:** `Acrobot/models/qlearning_base_20261119-183046_14cb.pkl`, 100 % de éxito y 196.6 pasos medios en la evaluación greedy.
 - **Modelo final con Q₀ = 0 (2026-11-20):** `Acrobot/models/qlearning_final_20261120-154018_3f81.pkl` (ver D-15).
 - **Modelo final (2026-11-20, Q₀ = −100):** `Acrobot/models/qlearning_final_pes_20261120-204635_c4c6.pkl` (ver D-18). Los anteriores se conservan como referencia.
+- **Modelo final de Dyna-Q (2026-11-22):** `Acrobot/models/dynaq_final_20261122-182339_bbc2.pkl` (ver D-25). Mismo formato: guarda solo la tabla Q, y `n_planning` va entre los hiperparámetros. Se carga con el mismo `qlearning.load_model`.
 
 ### D-11: Metodología de los barridos: 5 semillas y presupuesto fijo de episodios
 
@@ -408,6 +415,210 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 - **Lectura honesta:** cumplir la indicación del docente tiene un costo claro. Con el doble de episodios, el modelo pesimista tarda un 54 % más de pasos en llegar que el mejor modelo con Q₀ = 0, y queda incluso detrás del primer modelo optimista, que se entrenó con 3000 episodios. A cambio, llega al objetivo desde casi todos los estados iniciales (falla en 1 de 1000). La diferencia de pasos es el precio de que la exploración salga solo de ε-greedy: el valor del objetivo tiene que propagarse hacia atrás desde las pocas llegadas, en lugar de que la tabla empuje a probar lo desconocido.
 - **Evidencia:** además de las anteriores, `Acrobot/results/summary_pes_episodios.csv`, `Acrobot/results/qlearning_final_pes_20261120-204635_c4c6.json` y `Acrobot/results/qlearning_final_pes_20261120-204635_c4c6_test.json`.
+
+### D-20: Implementación de Dyna-Q
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** la fase 2 pide Dyna-Q como componente de investigación (Sutton y Barto, *Reinforcement Learning: An Introduction*, 8.1 y 8.2). El algoritmo agrega a Q-Learning un modelo del entorno y *n* actualizaciones de *planning* por cada paso real.
+- **Decisión** (`Acrobot/dynaq.py`, `DynaQAgent` hereda de `QLearningAgent`):
+  - **Pseudocódigo del libro tal cual.** En cada paso real: (d) actualización de Q-Learning con la transición real (el `update` heredado, sin cambios), (e) `Model(S, A) ← (R, S')` y (f) *n* veces: un estado ya visitado al azar, una acción ya probada en ese estado al azar, `(R, S') ← Model(S, A)` y la misma actualización de Q-Learning.
+  - **Modelo determinista, última transición vista.** Tres arreglos de `numpy` de tamaño estados × acciones: recompensa, s' y si la transición terminó el episodio. Con la discretización final son 3600 × 3 entradas, así que la memoria no es un problema.
+  - **Muestreo del *planning* en dos pasos, como el libro:** primero un estado uniforme entre los visitados y después una acción uniforme entre las probadas en él. Se guardan una lista de estados visitados y, por estado, la lista de acciones probadas.
+  - **Terminal contra corte por tiempo:** el modelo guarda `terminated` (llegada al objetivo). En el *planning*, una transición terminal tiene objetivo `r`, sin *bootstrap*. El corte a los 700 pasos (`truncated`) no se guarda como terminal, con el mismo criterio que D-08.
+  - **Generador aleatorio propio para el *planning*,** separado del de la exploración. Así, con *n* = 0 la exploración consume exactamente los mismos números que en Q-Learning y la corrida es idéntica.
+  - **Q₀ = −100 y el resto de la configuración final de Q-Learning** (D-17, D-18) como punto de partida. Los hiperparámetros se vuelven a revisar con Dyna-Q.
+  - El `.pkl` guarda solo la tabla Q (con `n_planning` entre los hiperparámetros): para actuar no hace falta el modelo. `qlearning.load_model` carga los dos tipos de modelo.
+- **Pseudocódigo de Sutton y Barto (8.2) contra el código:**
+
+  | Paso del libro | Código |
+  |---|---|
+  | Inicializar Q(s, a) y Model(s, a) | `QLearningAgent.__init__`: `Q = q_init` (−100, D-17). `DynaQAgent.__init__`: `model_reward`, `model_next`, `model_terminal` |
+  | (a) S ← estado actual (no terminal) | `train.run_episode`: `s = discretizer(obs)` |
+  | (b) A ← ε-greedy(S, Q) | `agent.act(s)` (`qlearning.py`) |
+  | (c) Ejecutar A; observar R, S' | `env.step(a)` y `s_next = discretizer(obs)` |
+  | (d) Q(S,A) ← Q(S,A) + α[R + γ maxₐ Q(S',a) − Q(S,A)] | `DynaQAgent.update` → `super().update(...)` = `QLearningAgent.update`. Si `terminated`, el objetivo es solo R |
+  | (e) Model(S,A) ← R, S' (entorno determinista) | `DynaQAgent.update_model`: guarda R, S' y `terminated`, y registra S y A como vistos |
+  | (f) Repetir n veces: S ← estado visitado al azar | `DynaQAgent.planning`: `observed_states[int(u_state * n_observed)]` |
+  | A ← acción probada en S al azar | `tried_actions[s][int(u_action * len(actions))]` |
+  | R, S' ← Model(S, A) | `model_reward[s, a]`, `model_next[s, a]` (y `model_terminal[s, a]`) |
+  | Misma actualización que en (d) | `super().update(...)`, con objetivo R si la transición guardada era terminal |
+
+  El libro no distingue la llegada a un estado terminal del corte por tiempo, porque en su ejemplo no hay cortes. Aquí `terminated` se guarda en el modelo y `truncated` no (D-08).
+- **Alternativas:**
+  - Muestrear uniforme entre los pares (s, a) vistos, en un solo paso. Es más simple, pero no es lo que dice el libro: le da más peso a los estados donde se probaron más acciones.
+  - Un modelo estocástico (contar transiciones y muestrear s' según su frecuencia), que atacaría el problema del *aliasing* (ver la hipótesis). Va más allá del 8.1–8.2 y queda fuera del alcance.
+  - Priorizar los pares con más error (*prioritized sweeping*, 8.4). También queda fuera del alcance.
+- **Hipótesis principal:** con Q₀ = −100 la tabla solo cambia cuando el valor de una llegada al objetivo se propaga hacia atrás, un paso por visita (D-17). El *planning* repite esas actualizaciones sin volver a jugar, así que Dyna-Q debería necesitar muchos menos episodios.
+- **Hipótesis secundaria (*aliasing*):** Acrobot es determinista, pero la discretización no: una celda agrupa muchos estados reales y el mismo (s, a) lleva a celdas s' distintas. El modelo se queda con una sola de esas transiciones, que puede no ser representativa, y con *n* grande ese error se repite muchas veces. Puede pasar que a partir de cierto *n* el rendimiento empeore.
+- **Verificación** (`Acrobot/test_dynaq.py`, pasan los 5 tests):
+  - una transición terminal se planifica sin *bootstrap*, y una no terminal con `r + γ max Q(s')`;
+  - el *planning* solo modifica pares (s, a) vistos de verdad;
+  - el modelo se queda con la última transición;
+  - **con *n* = 0, Dyna-Q reproduce exactamente a Q-Learning** (episodios, curva y tabla Q, 300 episodios).
+- **Primera prueba** (una sola semilla, 500 episodios, solo orientativa): con *n* = 5 la evaluación greedy ya da 327 pasos y 95 % de éxito, cuando Q-Learning a esa altura sigue en unos 700 pasos. Con *n* = 10 da 590 pasos y 58 % de éxito, y con *n* = 25 y *n* = 50 no llega nunca. Es consistente con las dos hipótesis, pero hay que confirmarlo con 5 semillas (experimento `dyna_n` de `sweep.py`).
+
+### D-21: Tiempo de entrenamiento por episodio y comparación en el mismo lote
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** cada paso de Dyna-Q hace 1 + *n* actualizaciones, así que la comparación con Q-Learning tiene que hacerse por episodios (eficiencia muestral) y también por tiempo de cómputo. Hasta la fase 1 solo se guardaba el tiempo total, que además incluye las evaluaciones periódicas. Esas evaluaciones tardan más cuanto peor es la política, porque los episodios fallidos duran 700 pasos. Los tiempos de la fase 1 se midieron con hasta 10 procesos en paralelo y solo son comparables dentro de un mismo lote (D-14).
+- **Decisión** (`train.py`, `sweep.py`):
+  - `_episodes.csv` tiene una columna nueva, **`elapsed_s`**: el tiempo acumulado **solo de entrenamiento** (episodios con aprendizaje, sin las evaluaciones). La métrica `learn_time_s` es su valor final. `train_time_s` se mantiene como antes (incluye las evaluaciones), para que siga siendo comparable con la fase 1.
+  - **El experimento `dyna_n` incluye *n* = 0 (Q-Learning) en el mismo lote** que los demás *n*. Las 30 corridas compiten por la CPU en las mismas condiciones, así que sus tiempos se pueden comparar entre sí. Esto cubre la re-corrida R3 de `PLAN.md` con el presupuesto de 10 000 episodios.
+- **Verificación:** medir el tiempo no cambia los resultados. Una re-corrida de Q-Learning con la configuración de `pes_epsilon` (semilla 0) repite paso a paso los primeros 500 episodios del CSV guardado en la fase 1. La variante *n* = 0 de `dyna_n` tiene que repetir los números de `pes_epsilon` / `decay0.999_min0.01`.
+- **Costo medido** (una corrida sola, 500 episodios, casi todos de 700 pasos): unos 80 µs por paso en Q-Learning y unos 90, 100, 140 y 200 µs con *n* = 5, 10, 25 y 50. Cada actualización de *planning* cuesta unos 2.5 µs, bastante menos que un paso del entorno.
+
+### D-22: Barrido de *n* (pasos de *planning*)
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente como resultado. La elección de *n* y α se hace en D-24, porque con α = 0.5 el resultado cambia mucho.
+- **Experimento:** `dyna_n` de `sweep.py`, con la configuración final de Q-Learning (Q₀ = −100, α = 0.5, bins (6, 6, 10, 10), ε de 1 a 0.01 con decay 0.999), 10 000 episodios y 5 semillas. Las 30 corridas se hicieron en un mismo lote de 10 procesos (D-21), en unos 4360 s.
+- **Control:** *n* = 0 repite exactamente los números de `pes_epsilon` / `decay0.999_min0.01` (259.5 ± 29.6 y 368.3 ± 16.4), como predice la equivalencia de D-20.
+- **Resultados:**
+
+  | *n* | Pasos finales | Éxito | Pasos en la curva | Tiempo de entrenamiento (`learn_time_s`) | Finales por semilla |
+  |---|---|---|---|---|---|
+  | 0 (Q-Learning) | 259.5 ± 29.6 | 99 % | 368.3 ± 16.4 | 676 s | 286, 230, 220, 267, 294 |
+  | **2** | 270.8 ± 83.1 | 98 % ± 4 % | **332.9 ± 14.1** | 732 s | 199, 267, 213, 430, 245 |
+  | 5 | 347.3 ± 184.0 | 79 % ± 40 % | 373.3 ± 32.9 | 837 s | 700, 260, 331, 168, 277 |
+  | 10 | 257.2 ± 48.0 | 99 % ± 1 % | 406.7 ± 11.3 | 1050 s | 208, 263, 315, 303, 198 |
+  | 25 | 440.8 ± 194.9 | 65 % ± 42 % | 469.2 ± 16.6 | 1691 s | 651, 225, 700, 319, 309 |
+  | 50 | 511.9 ± 147.7 | 59 % ± 43 % | 520.7 ± 17.5 | 2350 s | 700, 384, 407, 384, 685 |
+
+  Curva greedy por bloques de 1000 episodios (media de 5 semillas):
+
+  | *n* | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | 0 | 629 | 521 | 468 | 309 | 331 | 292 | 321 | 273 | 269 | 271 |
+  | 2 | 513 | 426 | 363 | 315 | 273 | 297 | 276 | 245 | 323 | 298 |
+  | 10 | 525 | 499 | 480 | 433 | 398 | 355 | 293 | 396 | 353 | 335 |
+  | 50 | 629 | 570 | 521 | 497 | 571 | 448 | 502 | 516 | 477 | 477 |
+
+- **Lectura:**
+  - **La hipótesis principal se cumple solo con *n* chico.** Con *n* = 2, Dyna-Q aprende más rápido que Q-Learning al principio: 513 contra 629 pasos en los primeros 1000 episodios y 363 contra 468 en el tercer bloque. Es la mejor curva del barrido. El resultado final empata con Q-Learning.
+  - **Con *n* grande el aprendizaje empeora, y mucho:** con 25 y 50 la curva queda por encima de 450 pasos y aparecen semillas que no aprenden nada (700 pasos). El desvío entre semillas crece de 30 a casi 200 pasos. Es lo que predice la hipótesis del *aliasing* (D-20). Una explicación posible: la celda guarda una sola transición, muchas veces una que se queda en la misma celda o se aleja del objetivo. Al repetirla decenas de veces por paso con α = 0.5, el valor vuelve hacia −100 y se borra lo que se había propagado desde la meta. Q-Learning, en cambio, promedia las transiciones según la frecuencia con que ocurren de verdad. **Falta medirlo directamente** (cuántas celdas s' distintas hay por (s, a)).
+  - **Costo:** el tiempo de entrenamiento crece casi lineal con *n*: unos 34 s más por cada paso de *planning* en 10 000 episodios. A igual tiempo de reloj, solo *n* = 2 compite con Q-Learning.
+  - Todas las variantes con *planning* tocan más celdas (46 % contra 37 %): el *planning* propaga valores a pares que la experiencia real visitó pocas veces.
+- **Pendiente:**
+  1. Medir el *aliasing* del modelo.
+  2. Revisar α con Dyna-Q. Con Q-Learning y Q₀ = −100 se eligió α = 0.5 porque la propagación era lenta (D-18). Con *planning* la propagación ya es rápida, así que un α menor podría promediar mejor el *aliasing* y permitir *n* más grandes.
+- **Evidencia:** `Acrobot/results/summary_dyna_n.csv` y `Acrobot/results/dyna_n_*`.
+
+### D-23: Medición del *aliasing* del modelo
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** el barrido de *n* (D-22) muestra que con mucho *planning* Dyna-Q aprende peor. La explicación propuesta es que el modelo determinista de Sutton y Barto (8.2) guarda una sola transición por (s, a), y la discretización hace que el mismo (s, a) lleve a celdas distintas. Hacía falta medirlo, no solo suponerlo.
+- **Decisión** (`Acrobot/aliasing.py`): se juegan 200 episodios con la política del modelo final de Q-Learning más ε = 0.1, desde estados iniciales propios (semillas desde 3 000 000), y se cuentan las transiciones reales de cada (s, a). Se reportan:
+  - cuántas celdas s' distintas tiene cada par (solo pares con al menos 5 visitas);
+  - la **probabilidad de que la transición guardada coincida con la próxima real**. Si el par lleva a s'ᵢ con probabilidad pᵢ, la guardada es s'ᵢ con probabilidad pᵢ y la próxima también, así que coinciden con probabilidad Σ pᵢ². Vale 1 si el par es determinista. Se reporta la media pesada por visitas;
+  - cuántas transiciones se quedan en la misma celda y cuántos pares a veces llegan al objetivo y a veces no.
+- **Alternativas:** medirlo dentro del entrenamiento de Dyna-Q. Se descartó porque mezclaría la medición con una política que va cambiando. Con un modelo fijo, el resultado depende solo de la discretización y de qué estados visita una política que funciona.
+- **Resultados** (modelo `qlearning_final_pes_20261120-204635_c4c6.pkl`, 45 597 transiciones, 1984 pares vistos, 995 con al menos 5 visitas):
+
+  | Medida | Valor |
+  |---|---|
+  | Pares que llevan a más de una celda | **99.3 %** |
+  | Celdas s' distintas por par (media / máximo) | **6.4** / 19 |
+  | Probabilidad de que la transición guardada coincida con la real (pesada por visitas) | **28 %** |
+  | Transiciones que se quedan en la misma celda | 11 % |
+  | Pares que a veces se quedan en la celda y a veces salen | 31 % |
+  | Pares que a veces llegan al objetivo y a veces no | 71 |
+
+- **Lectura:** **el modelo de "última transición" no representa el entorno discretizado.** En el 72 % de los pasos reales, la transición que el modelo guarda para ese par es distinta de la que de verdad ocurre. Cada actualización de *planning* aplica, entonces, una transición que en general no es la típica del par, y con *n* grande ese error pesa más que la experiencia real. Hay dos casos especialmente dañinos:
+  - **Pares que a veces llegan al objetivo y a veces no (71).** Si el modelo guardó la llegada, el *planning* lleva Q(s, a) hacia −1, un valor muy optimista. Si guardó la no llegada, lo baja. El valor salta según cuál fue la última visita.
+  - **Pares que a veces se quedan en la celda (31 %).** Si el modelo guardó "me quedo en la misma celda", el *planning* repite una actualización que tira el valor hacia −100.
+
+  Q-Learning no tiene este problema en la misma medida, porque cada transición real entra una sola vez y, con α < 1, la tabla promedia según la frecuencia real. Esto confirma la hipótesis secundaria de D-20 y explica por qué en D-22 conviene un *n* chico.
+- **Evidencia:** `Acrobot/results/qlearning_final_pes_20261120-204635_c4c6_aliasing.json`.
+
+### D-24: α con Dyna-Q: α bajo y *n* chico
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente como resultado. La elección final está en D-25.
+- **Contexto:** con Q-Learning y Q₀ = −100 se eligió α = 0.5, porque una α alta propaga rápido el valor de las llegadas al objetivo (D-18). Con Dyna-Q esa propagación la hace el *planning*. Además, el modelo acierta solo el 28 % de las transiciones (D-23), y una α baja promedia más muestras antes de mover la tabla. La hipótesis es que con *planning* conviene una α más baja.
+- **Experimento:** `dyna_alpha` de `sweep.py`, con α ∈ {0.1, 0.2, 0.3} y *n* ∈ {0, 2, 10}, sobre la configuración final de Q-Learning, 10 000 episodios, 5 semillas y un mismo lote de 45 corridas. *n* = 0 (Q-Learning con las mismas α) separa el efecto de α del efecto del *planning*. α = 0.5 está en `dyna_n` (D-22), que corrió en otro lote, así que su tiempo no es comparable con este.
+- **Resultados:**
+
+  | *n* | α | Pasos finales | Éxito | Pasos en la curva | `learn_time_s` | Curva por bloques de 1000 episodios |
+  |---|---|---|---|---|---|---|
+  | 0 | 0.1 | 554.5 ± 68.9 | 52 % ± 21 % | 625.1 ± 40.8 | 1702 s | 700 → 667 → 624 → 616 → 565 |
+  | 0 | 0.2 | 306.5 ± 35.8 | 92 % ± 4 % | 457.3 ± 55.2 | 1183 s | 693 → 553 → 410 → 356 → 318 |
+  | 0 | 0.3 | 271.8 ± 56.0 | 96 % ± 4 % | 389.2 ± 24.2 | 1056 s | 683 → 491 → 319 → 303 → 266 |
+  | 0 | 0.5 (`dyna_n`) | 259.5 ± 29.6 | 99 % | 368.3 ± 16.4 | (otro lote) | 629 → 468 → 331 → 321 → 271 |
+  | 2 | 0.1 | 187.0 ± 19.1 | 100 % | **200.1 ± 10.3** | 641 s | **271** → 199 → 187 → 177 → 202 |
+  | **2** | **0.2** | **186.0 ± 5.4** | **100 %** | 222.4 ± 7.4 | **555 s** | 371 → 244 → 234 → 182 → 192 |
+  | 2 | 0.3 | 278.6 ± 144.6 | 91 % ± 18 % | 251.3 ± 12.6 | 585 s | 372 → 262 → 239 → 207 → 221 |
+  | 10 | 0.1 | 203.6 ± 22.0 | 100 % | 247.7 ± 12.4 | 988 s | 360 → 232 → 236 → 218 → 216 |
+  | 10 | 0.2 | 221.9 ± 21.5 | 100 % | 302.0 ± 14.0 | 1198 s | 482 → 345 → 300 → 248 → 251 |
+  | 10 | 0.3 | 264.9 ± 124.0 | 96 % ± 6 % | 324.2 ± 23.4 | 991 s | 483 → 413 → 266 → 230 → 256 |
+
+  (La curva por bloques muestra los bloques 1, 3, 5, 7 y 9.)
+
+- **Lectura:**
+  - **α y *planning* se complementan.** Sin *planning*, bajar α empeora: con α = 0.1, Q-Learning casi no aprende (52 % de éxito), porque el valor del objetivo se propaga demasiado lento (D-17). Con *planning*, bajar α mejora. **El *planning* se encarga de propagar y la α baja se encarga de promediar el *aliasing*.**
+  - **Dyna-Q con *n* = 2 y α = 0.1–0.2 supera claramente a Q-Learning:** 186 pasos y 100 % de éxito con todas las semillas, contra 259.5 del mejor Q-Learning con el mismo presupuesto. Incluso mejora al Q-Learning final entrenado con 40 000 episodios (212.5 ± 40.4, D-18). Con α = 0.1 aprende casi todo en los primeros 1000 episodios (271 pasos, cuando Q-Learning sigue en 629).
+  - **También gana en tiempo de reloj.** En este lote, *n* = 2 tarda unos 600 s, contra más de 1000 s de Q-Learning. El *planning* cuesta poco por paso (D-21), y como aprende antes, los episodios son mucho más cortos (los fallidos duran 700 pasos).
+  - **Con α ≥ 0.3 vuelve la inestabilidad** (semillas que fallan: 564 y 505 pasos), igual que con *n* grande en D-22. Las dos cosas aumentan cuánto pesa cada transición del modelo, que en general no es la típica (D-23).
+  - **El mejor α con *planning* es el más bajo probado,** así que puede haber algo mejor más abajo. También puede pasar que con α bajo los *n* grandes dejen de fallar. Por eso se corre la continuación `dyna_alpha_bajo`: (*n*, α) ∈ {(2, 0.05), (5, 0.05), (5, 0.1), (10, 0.05), (25, 0.05), (25, 0.1)}.
+- **Continuación `dyna_alpha_bajo`** (mismas condiciones, otro lote de 30 corridas):
+
+  | *n* | α | Pasos finales | Éxito | Pasos en la curva | `learn_time_s` | Finales por semilla |
+  |---|---|---|---|---|---|---|
+  | **2** | **0.05** | **169.5 ± 11.5** | **100 %** | **172.5 ± 7.1** | 509 s | 180, 160, 186, 159, 161 |
+  | 5 | 0.05 | 210.5 ± 63.1 | 97 % ± 5 % | 210.3 ± 20.4 | 659 s | 289, 187, 282, 151, 144 |
+  | 5 | 0.1 | 286.7 ± 207.6 | 80 % ± 40 % | 234.9 ± 21.3 | 967 s | 181, 168, 164, 220, 700 |
+  | 10 | 0.05 | 196.9 ± 14.3 | 100 % | 239.7 ± 21.4 | 1165 s | 188, 219, 184, 208, 184 |
+  | 25 | 0.05 | 206.2 ± 31.2 | 100 % | 259.5 ± 11.8 | 1574 s | 219, 227, 171, 168, 246 |
+  | 25 | 0.1 | 248.2 ± 40.2 | 100 % ± 1 % | 283.6 ± 9.2 | 1536 s | 202, 297, 244, 291, 207 |
+
+  - **Con *n* = 2, bajar α a 0.05 vuelve a mejorar:** 169.5 pasos con el menor desvío del barrido, y la curva ya está en 207 pasos en los primeros 1000 episodios. Desde el tercer bloque se mantiene plana, cerca de 160–175.
+  - **Con α bajo, los *n* grandes dejan de fallar:** con *n* = 25 y α = 0.5 había semillas en 700 pasos (D-22). Con α = 0.05 y 0.1, todas las semillas llegan al 100 %. Es la confirmación más directa de que el problema de los *n* grandes era el peso del modelo con *aliasing* (D-23). Lo que importa es **cuánto mueve la tabla cada transición del modelo**, que depende de *n* y de α juntos. Aun así, ningún *n* grande supera a *n* = 2, y cuestan el triple de tiempo.
+  - *n* = 5 queda en una zona inestable (una semilla en 700 con α = 0.1). Con 5 semillas, el desvío alto de esa variante no permite descartar que sea ruido.
+  - **El mejor α sigue en el borde de la grilla (0.05).** Por eso se probó más abajo.
+- **Última continuación `dyna_alpha_minimo`** (otro lote de 25 corridas). *n* = 1 es el mínimo de *planning* posible:
+
+  | *n* | α | Pasos finales | Éxito | Pasos en la curva | Finales por semilla |
+  |---|---|---|---|---|---|
+  | 1 | 0.02 | 196.8 ± 26.9 | 100 % | 212.4 ± 19.1 | 183, 204, 241, 159, 197 |
+  | 1 | 0.03 | 169.2 ± 22.6 | 100 % | 188.7 ± 13.2 | 135, 160, 165, 200, 186 |
+  | 1 | 0.05 | 166.6 ± 19.5 | 100 % | 179.5 ± 6.8 | 147, 160, 152, 174, 201 |
+  | 2 | 0.02 | 159.6 ± 23.5 | 100 % | 190.0 ± 19.6 | 132, 155, 159, 149, 203 |
+  | 2 | 0.03 | 168.8 ± 16.6 | 100 % | 169.1 ± 16.2 | 154, 190, 145, 177, 179 |
+  | 2 | 0.05 (`dyna_alpha_bajo`) | 169.5 ± 11.5 | 100 % | 172.5 ± 7.1 | 180, 160, 186, 159, 161 |
+
+  - **Se encontró la meseta.** Con *n* ∈ {1, 2} y α entre 0.03 y 0.05, todas las variantes quedan entre 160 y 170 pasos finales y entre 169 y 189 en la curva. Las diferencias son más chicas que el desvío entre semillas (11 a 23 pasos), así que con 5 semillas no se distinguen.
+  - **Con α = 0.02 la curva empieza a empeorar** (190–212): el aprendizaje es más lento al principio (unos 320 pasos en los primeros 1000 episodios, contra 265–300). Bajar más α ya no ayuda.
+  - Entre *n* = 1 y *n* = 2 no hay una diferencia clara. Lo que importa es tener *planning*, no cuánto, siempre que sea poco.
+  - Los tiempos de los distintos lotes no se comparan entre sí (D-21).
+- **Elección:** ver D-25.
+- **Evidencia:** `Acrobot/results/summary_dyna_alpha.csv`, `summary_dyna_alpha_bajo.csv`, `summary_dyna_alpha_minimo.csv` y los `dyna_alpha*` de cada experimento.
+
+### D-25: Configuración y modelo final de Dyna-Q
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** los barridos de *n* (D-22) y de α (D-24) dejan una meseta: *n* ∈ {1, 2} con α entre 0.03 y 0.05, todas entre 160 y 170 pasos.
+- **Decisión** (`DYNAQ_CONFIG` en `train.py`, se usa con `python train.py --algorithm dynaq`):
+  - **n = 2 y α = 0.05.** Dentro de la meseta es la variante con menos desvío entre semillas (169.5 ± 11.5 pasos finales, 172.5 ± 7.1 en la curva) y la única cuyas 5 semillas quedan todas por debajo de 190 pasos.
+  - El resto, igual que en Q-Learning (D-18): ángulos con bins (6, 6, 10, 10), ω1 ∈ ±2π, ω2 ∈ ±4.5π, **Q₀ = −100**, γ = 0.99, ε de 1.0 a 0.01 con decay 0.999. Así, la única diferencia con Q-Learning es el *planning* y su α.
+  - **10 000 episodios.** La curva se estabiliza alrededor del episodio 3000 (unos 160–175 pasos desde el tercer bloque, D-24). No hace falta llegar a los 40 000 de Q-Learning.
+- **Alternativas:**
+  - *n* = 2 con α = 0.03 (mejor curva media, 169.1) o con α = 0.02 (mejor resultado final medio, 159.6). Tienen más desvío, y con 5 semillas las diferencias no son significativas.
+  - *n* = 1 con α = 0.05 (166.6 ± 19.5). Es equivalente. Se prefirió *n* = 2 por el menor desvío.
+  - No re-ajustar bins ni ε para Dyna-Q. Para no multiplicar barridos, la discretización y la exploración se toman de Q-Learning, y la comparación queda limpia: mismos estados y misma exploración, con y sin *planning*. Queda anotado como limitación.
+- **Modelo final:** `Acrobot/models/dynaq_final_20261122-182339_bbc2.pkl`, entrenado con la semilla 0 en 593 s de entrenamiento (628 s con las evaluaciones), sin otros procesos corriendo. Reproduce exactamente el resultado de esa semilla en `dyna_alpha_bajo` / `n2_a0.05`: 180.28 pasos y 100 % de éxito en los 100 estados de evaluación. Sobre los **1000 estados de prueba** (`evaluate_model.py`):
+
+  | Modelo | Algoritmo | Episodios | Tiempo de entrenamiento | Pasos medios | Desvío | Éxito |
+  |---|---|---|---|---|---|---|
+  | `qlearning_final_pes_20261120-204635_c4c6.pkl` (D-18) | Q-Learning, α = 0.5 | 40 000 | 947 s | 218.2 | 65.9 | 99.9 % |
+  | **`dynaq_final_20261122-182339_bbc2.pkl`** | **Dyna-Q, n = 2, α = 0.05** | **10 000** | **593 s** | **183.2** | **56.4** | **100 %** |
+  | `qlearning_final_20261120-154018_3f81.pkl` (referencia, Q₀ = 0) | Q-Learning | 20 000 | 303 s | 142.1 | 51.4 | 99.6 % |
+
+  Los dos tiempos se midieron con un solo proceso, pero en días distintos. El de Q-Learning es el tiempo total de `train.py`, que incluye las evaluaciones periódicas.
+- **Lectura:**
+  - **Con Q₀ = −100, Dyna-Q es mejor que Q-Learning en las tres medidas de la comparación:**
+    - **eficiencia muestral:** un cuarto de los episodios;
+    - **costo computacional:** menos tiempo total, porque *planning* con *n* = 2 cuesta poco y los episodios se acortan antes;
+    - **rendimiento final:** 16 % menos pasos y ningún fallo en 1000 estados.
+  - Recupera parte del costo de cumplir la indicación del docente (D-18), aunque sigue por detrás del Q-Learning con inicialización optimista (142.1).
+  - La mejora no viene de "más *planning* es mejor", sino de una combinación: **un poco de *planning*, que propaga el valor del objetivo, y una α baja, que promedia el *aliasing* del modelo** (D-22, D-23, D-24).
+- **Evidencia:** `Acrobot/results/dynaq_final_20261122-182339_bbc2.json`, `Acrobot/results/dynaq_final_20261122-182339_bbc2_test.json` y `Acrobot/results/summary_dyna_*.csv`.
 
 ## COUNTER (Connect Four)
 

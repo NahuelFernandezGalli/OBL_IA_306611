@@ -69,11 +69,14 @@ def save_model(path, agent, discretizer, config):
 
 
 def load_model(path):
-    """Devuelve (agente, discretizador). El agente queda listo para actuar en modo greedy."""
+    """Devuelve (agente, discretizador). El agente queda listo para actuar en modo greedy.
+    Sirve también para los modelos de Dyna-Q: para actuar solo hace falta la tabla Q."""
     with open(path, "rb") as f:
         data = pickle.load(f)
     discretizer = Discretizer.from_dict(data["discretizer"])
-    agent = QLearningAgent(discretizer.n_states, data["Q"].shape[1], **data["hyperparams"])
+    hyperparams = dict(data["hyperparams"])
+    hyperparams.pop("n_planning", None)
+    agent = QLearningAgent(discretizer.n_states, data["Q"].shape[1], **hyperparams)
     agent.Q = data["Q"]
     agent.epsilon = 0.0
     return agent, discretizer

@@ -5,8 +5,10 @@
 - Al final hace una evaluación greedy más larga, que es la métrica para comparar corridas.
 - Guarda la corrida en results/ y, si se pide, el modelo en models/.
 
-Uso: python train.py --save-model                 (configuración final, D-18)
+Uso: python train.py --save-model                    (Q-Learning, configuración final, D-18)
+     python train.py --algorithm dynaq --save-model   (Dyna-Q, configuración final, D-25)
      python train.py --episodes 3000 --bins 10 --alpha 0.2 --tag prueba
+     python train.py --algorithm dynaq --n-planning 10 --episodes 3000
 """
 
 import argparse
@@ -19,6 +21,7 @@ import numpy as np
 
 from discretizer import OMEGA1_MAX, OMEGA2_MAX, make_discretizer
 from experiment_log import new_run_id, save_run
+from dynaq import DynaQAgent
 from qlearning import QLearningAgent, save_model
 
 MODELS_DIR = Path(__file__).parent / "models"
@@ -44,6 +47,14 @@ DEFAULT_CONFIG = {
               "epsilon_min": 0.01, "epsilon_decay": 0.999, "q_init": -100.0},
     "eval": {"every": 250, "episodes": 20, "final_episodes": 100},
 }
+
+
+# Configuración final de Dyna-Q (D-25): la misma discretización y exploración que Q-Learning,
+# con n = 2 pasos de planning, α = 0.05 y 10000 episodios.
+DYNAQ_CONFIG = copy.deepcopy(DEFAULT_CONFIG)
+DYNAQ_CONFIG["algorithm"] = "dynaq"
+DYNAQ_CONFIG["episodes"] = 10000
+DYNAQ_CONFIG["agent"].update(alpha=0.05, n_planning=2)
 
 
 def make_env(max_steps):
@@ -92,7 +103,10 @@ def evaluate(env, agent, discretizer, n_episodes, seed_base=EVAL_SEED_BASE):
 def build(config):
     d = config["discretization"]
     discretizer = make_discretizer(d["representation"], d["bins"], d["omega1_max"], d["omega2_max"])
-    agent = QLearningAgent(discretizer.n_states, 3, seed=config["seed"], **config["agent"])
+    if config["algorithm"] == "dynaq":
+        agent = DynaQAgent(discretizer.n_states, 3, seed=config["seed"], **config["agent"])
+    else:
+        agent = QLearningAgent(discretizer.n_states, 3, seed=config["seed"], **config["agent"])
     return agent, discretizer
 
 
@@ -104,13 +118,19 @@ def run_training(config, verbose=True):
     ev = config["eval"]
     episodes, curve = [], []
     start = time.perf_counter()
+    # Tiempo acumulado solo de entrenamiento (sin las evaluaciones periódicas), para
+    # comparar Q-Learning y Dyna-Q en tiempo de reloj (D-21).
+    learn_time = 0.0
 
     for ep in range(config["episodes"]):
         # Solo el primer reset lleva semilla; los siguientes siguen la secuencia del entorno.
         seed = config["seed"] if ep == 0 else None
+        t0 = time.perf_counter()
         reward, steps, success, _ = run_episode(train_env, agent, discretizer, learn=True, seed=seed)
+        learn_time += time.perf_counter() - t0
         episodes.append({"episode": ep, "reward": reward, "steps": steps,
-                         "success": int(success), "epsilon": round(agent.epsilon, 4)})
+                         "success": int(success), "epsilon": round(agent.epsilon, 4),
+                         "elapsed_s": round(learn_time, 3)})
         agent.end_episode(ep)
         if (ep + 1) % ev["every"] == 0:
             m = evaluate(eval_env, agent, discretizer, ev["episodes"])
@@ -131,6 +151,7 @@ def run_training(config, verbose=True):
     metrics["visited_states"] = float(np.mean(np.any(agent.Q != agent.q_init, axis=1)))
     metrics["n_states"] = discretizer.n_states
     metrics["train_time_s"] = round(train_time, 2)
+    metrics["learn_time_s"] = round(learn_time, 2)
     metrics["train_last100_mean_steps"] = float(np.mean([e["steps"] for e in episodes[-100:]]))
     # Media de los pasos greedy a lo largo de la curva: resume qué tan rápido aprende
     # (dos corridas con el mismo resultado final se distinguen por cuánto tardaron en llegar).
@@ -162,32 +183,44 @@ def train(config, save=False, tag=None, verbose=True):
 
 
 def config_from_args(args):
-    config = copy.deepcopy(DEFAULT_CONFIG)
+    """Parte de la configuración final del algoritmo elegido y pisa solo lo que se pasó."""
+    config = copy.deepcopy(DYNAQ_CONFIG if args.algorithm == "dynaq" else DEFAULT_CONFIG)
     config["seed"] = args.seed
-    config["episodes"] = args.episodes
-    bins = args.bins[0] if len(args.bins) == 1 else args.bins
-    config["discretization"].update(representation=args.representation, bins=bins,
-                                    omega1_max=args.omega1_max, omega2_max=args.omega2_max)
-    config["agent"].update(alpha=args.alpha, gamma=args.gamma, epsilon_min=args.epsilon_min,
-                           epsilon_decay=args.epsilon_decay, q_init=args.q_init)
+    if args.episodes is not None:
+        config["episodes"] = args.episodes
+    d = config["discretization"]
+    if args.bins is not None:
+        d["bins"] = args.bins[0] if len(args.bins) == 1 else args.bins
+    for key in ["representation", "omega1_max", "omega2_max"]:
+        if getattr(args, key) is not None:
+            d[key] = getattr(args, key)
+    keys = ["alpha", "gamma", "epsilon_min", "epsilon_decay", "q_init"]
+    if args.algorithm == "dynaq":
+        keys.append("n_planning")
+    for key in keys:
+        if getattr(args, key) is not None:
+            config["agent"][key] = getattr(args, key)
     return config
 
 
 def parse_args(argv=None):
-    """Parámetros de línea de comandos; los valores por defecto salen de DEFAULT_CONFIG."""
+    """Parámetros de línea de comandos. Los que no se pasan (None) salen de la configuración
+    final del algoritmo: DEFAULT_CONFIG para Q-Learning y DYNAQ_CONFIG para Dyna-Q."""
     p = argparse.ArgumentParser()
+    p.add_argument("--algorithm", choices=["qlearning", "dynaq"], default="qlearning")
+    p.add_argument("--n-planning", type=int, default=None, help="pasos de planning (solo dynaq)")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--episodes", type=int, default=DEFAULT_CONFIG["episodes"])
-    p.add_argument("--representation", choices=["angles", "raw"], default="angles")
+    p.add_argument("--episodes", type=int, default=None)
+    p.add_argument("--representation", choices=["angles", "raw"], default=None)
     # Un número (igual en todas las dimensiones) o uno por dimensión: --bins 8 8 12 12
-    p.add_argument("--bins", type=int, nargs="+", default=DEFAULT_CONFIG["discretization"]["bins"])
-    p.add_argument("--omega1-max", type=float, default=OMEGA1_MAX / 2)
-    p.add_argument("--omega2-max", type=float, default=OMEGA2_MAX / 2)
-    p.add_argument("--alpha", type=float, default=DEFAULT_CONFIG["agent"]["alpha"])
-    p.add_argument("--gamma", type=float, default=DEFAULT_CONFIG["agent"]["gamma"])
-    p.add_argument("--epsilon-min", type=float, default=DEFAULT_CONFIG["agent"]["epsilon_min"])
-    p.add_argument("--epsilon-decay", type=float, default=DEFAULT_CONFIG["agent"]["epsilon_decay"])
-    p.add_argument("--q-init", type=float, default=DEFAULT_CONFIG["agent"]["q_init"])
+    p.add_argument("--bins", type=int, nargs="+", default=None)
+    p.add_argument("--omega1-max", type=float, default=None)
+    p.add_argument("--omega2-max", type=float, default=None)
+    p.add_argument("--alpha", type=float, default=None)
+    p.add_argument("--gamma", type=float, default=None)
+    p.add_argument("--epsilon-min", type=float, default=None)
+    p.add_argument("--epsilon-decay", type=float, default=None)
+    p.add_argument("--q-init", type=float, default=None)
     p.add_argument("--save-model", action="store_true")
     p.add_argument("--tag", default=None)
     return p.parse_args(argv)

@@ -70,6 +70,16 @@ def chosen(**agent_kwargs):
     return merge(CHOSEN_DISC, agent(**agent_kwargs))
 
 
+# Configuración final de Q-Learning con Q0 = -100 (D-18), con 10000 episodios.
+FINAL_PES = merge(CHOSEN_DISC, merge(disc(bins=[6, 6, 10, 10]), merge(
+    agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, epsilon_min=0.01, q_init=-100.0), {"episodes": 10000})))
+
+
+def dyna(n, **overrides):
+    """Dyna-Q con n pasos de planning sobre FINAL_PES, más otros cambios."""
+    return merge(FINAL_PES, merge({"algorithm": "dynaq", "agent": {"n_planning": n}}, overrides))
+
+
 # Cada experimento es una lista de (nombre de la variante, cambios sobre BASE).
 EXPERIMENTS = {
     # A: rangos de las velocidades (10 bins por dimensión, ángulos).
@@ -174,6 +184,25 @@ EXPERIMENTS = {
             agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, epsilon_min=0.01, q_init=-100.0), {"episodes": n}))))
         for n in [20000, 40000]
     ],
+    # Dyna-Q (fase 2, D-20 y D-21): pasos de planning n, sobre la configuración final de
+    # Q-Learning (Q0 = -100) y el mismo presupuesto de 10000 episodios que los barridos pes_*.
+    # n = 0 es Q-Learning: tiene que repetir los números de pes_epsilon (decay0.999_min0.01) y,
+    # al correr en el mismo lote, da tiempos de reloj comparables con los de Dyna-Q.
+    "dyna_n": [(str(n), dyna(n)) for n in [0, 2, 5, 10, 25, 50]],
+    # α con Dyna-Q (D-22). Con planning el valor del objetivo se propaga rápido, así que un α
+    # menor que 0.5 podría promediar mejor el aliasing. n = 0 (Q-Learning con los mismos α)
+    # separa el efecto de α del efecto del planning. α = 0.5 ya está en dyna_n.
+    "dyna_alpha": [(f"n{n}_a{a}", dyna(n, agent={"alpha": a}))
+                   for n in [0, 2, 10] for a in [0.1, 0.2, 0.3]],
+    # Continuación: en dyna_alpha el mejor α con planning fue el más bajo probado (0.1).
+    # Se baja α y se agregan n intermedios y grandes, para ver si con α bajo el aliasing
+    # deja de castigar a los n grandes (D-24).
+    "dyna_alpha_bajo": [(f"n{n}_a{a}", dyna(n, agent={"alpha": a}))
+                        for n, a in [(2, 0.05), (5, 0.05), (5, 0.1), (10, 0.05), (25, 0.05), (25, 0.1)]],
+    # Última continuación: el mejor α (0.05, con n = 2) seguía en el borde de la grilla.
+    # n = 1 es el mínimo de planning posible (D-24).
+    "dyna_alpha_minimo": [(f"n{n}_a{a}", dyna(n, agent={"alpha": a}))
+                          for n, a in [(1, 0.02), (1, 0.03), (1, 0.05), (2, 0.02), (2, 0.03)]],
 }
 
 
@@ -205,7 +234,8 @@ def run_experiment(name):
                   f"exito={m['success_rate']:.0%} ({time.perf_counter() - start:.0f}s)")
 
 
-SUMMARY_METRICS = ["mean_steps", "success_rate", "curve_mean_steps", "visited_states", "train_time_s"]
+SUMMARY_METRICS = ["mean_steps", "success_rate", "curve_mean_steps", "visited_states", "train_time_s",
+                   "learn_time_s"]
 
 
 def summarize(name):
@@ -223,6 +253,8 @@ def summarize(name):
             continue
         row = {"variant": variant, "n_seeds": len(runs), "n_states": runs[0]["metrics.n_states"]}
         for metric in SUMMARY_METRICS:
+            if not runs[0].get(f"metrics.{metric}"):
+                continue  # métrica que no existía cuando se corrió el experimento (learn_time_s)
             values = np.array([float(r[f"metrics.{metric}"]) for r in runs])
             row[f"{metric}_mean"] = round(float(values.mean()), 3)
             row[f"{metric}_std"] = round(float(values.std()), 3)

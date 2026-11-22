@@ -1,0 +1,18 @@
+{
+  "model": "qlearning_final_pes_20261120-204635_c4c6.pkl",
+  "episodes": 200,
+  "epsilon": 0.1,
+  "seed_base": 3000000,
+  "transitions": 45597,
+  "pairs_observed": 1984,
+  "pairs_min_visits": 995,
+  "min_visits": 5,
+  "frac_pairs_more_than_one_next": 0.992964824120603,
+  "mean_distinct_next": 6.393969849246231,
+  "max_distinct_next": 19,
+  "match_prob_weighted": 0.282698879265906,
+  "match_prob_unweighted": 0.30218282057588536,
+  "frac_self_loop_transitions": 0.11173980744347216,
+  "frac_pairs_mixed_self_loop": 0.3055276381909548,
+  "pairs_mixed_terminal": 71
+}

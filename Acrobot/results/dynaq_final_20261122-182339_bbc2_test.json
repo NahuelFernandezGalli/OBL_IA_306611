@@ -1,0 +1,12 @@
+{
+  "model": "dynaq_final_20261122-182339_bbc2.pkl",
+  "test_episodes": 1000,
+  "test_seed_base": 2000000,
+  "mean_reward": -182.228,
+  "mean_steps": 183.228,
+  "std_steps": 56.40397163321037,
+  "success_rate": 1.0,
+  "mean_steps_success": 183.228,
+  "omega1_abs_p99": 4.882574267387392,
+  "omega2_abs_p99": 8.715523862838754
+}
