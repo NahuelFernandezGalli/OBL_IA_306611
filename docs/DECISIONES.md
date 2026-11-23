@@ -44,6 +44,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-30](#d-30-e1-impacto-de-la-poda-alpha-beta) | Connect Four | E1: impacto de la poda Alpha-Beta | Vigente |
 | [D-31](#d-31-e2-funciones-de-evaluación-contra-stratego) | Connect Four | E2: funciones de evaluación contra Stratego (`completa`) | Vigente |
 | [D-32](#d-32-con-la-regla-de-captura-el-que-empieza-tiene-victoria-forzada) | Connect Four | Con la regla de captura, el que empieza tiene victoria forzada | Vigente |
+| [D-33](#d-33-e3-profundidad-contra-rendimiento) | Connect Four | E3: profundidad contra rendimiento (d = 5) | Vigente |
 
 ---
 
@@ -785,3 +786,43 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - Stratego, jugando primero con d = 4, a veces no encuentra la victoria forzada: perdimos entre 2 y 5 de las 25 aperturas forzadas para J1 (D-31).
 - **Alternativas:** buscar con más profundidad (d = 12 tarda 34 s por posición y no cambió nada); resolver el juego completo (fuera del alcance del curso y no hace falta para el análisis).
 - **Evidencia:** `ConnectFour/results/aperturas_20261123-114823_0be6.json`, `ConnectFour/results/aperturas_20261123-114823_0be6_openings.csv` y `ConnectFour/results/summary_aperturas.csv`.
+
+### D-33: E3: profundidad contra rendimiento
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** hay que elegir la profundidad del agente: más profundidad ve más lejos, pero el costo crece como b\*^d (D-30). Además hay que verificar lo que predice D-32: jugando primero y con suficiente profundidad, se gana siempre.
+- **Decisión** (`python experiments.py profundidad` y `profundidad_vacio`):
+  - Minimax con poda y `completa` (D-31), con **profundidades 1 a 8**, contra `Stratego(2, 4)` en los dos turnos.
+  - Sobre las 49 aperturas (784 partidas, 460 s) y además desde el tablero vacío (16 partidas, 35 s). Todo con 6 procesos.
+- **Resultados** (V/E/D; "abiertas" son las 24 aperturas sin victoria forzada, D-32; tiempos con 6 procesos en paralelo):
+
+  | d | 1º (49) | 2º (49) | 2º, abiertas (24) | Tiempo medio por jugada | Tiempo máximo por jugada | Desde el vacío, 1º / 2º |
+  |---|---|---|---|---|---|---|
+  | 1 | 44/0/5 | 9/0/40 | 8/0/16 | 0.7 ms | 2 ms | V / D |
+  | 2 | 45/0/4 | 14/0/35 | 10/0/14 | 2 ms | 35 ms | V / V |
+  | 3 | 49/0/0 | 17/0/32 | 14/0/10 | 8 ms | 23 ms | V / V |
+  | 4 | 49/0/0 | 24/0/25 | 20/0/4 | 25 ms | 0.1 s | V / V |
+  | **5** | 49/0/0 | 26/0/23 | **21/0/3** | **0.11 s** | **0.8 s** | V / V |
+  | 6 | 49/0/0 | 25/0/24 | 20/0/4 | 0.30 s | 2.1 s | V / V |
+  | 7 | 49/0/0 | 27/0/22 | 22/0/2 | 1.0 s | 6.9 s | V / V |
+  | 8 | 49/0/0 | 23/0/26 | 19/0/5 | 2.6 s | 36.7 s | V / V |
+
+  Stratego (d = 4, sin poda) tarda unos 0.3 s por jugada en este lote.
+- **Conclusiones:**
+  - **Jugando primero, d ≥ 3 gana las 49.** Con d = 1 y 2 pierde algunas: no ve las capturas que arman una línea dos jugadas más adelante.
+  - **Desde el tablero vacío se gana en los dos turnos desde d = 2.** Jugando segundo también: Stratego, de primero, no encuentra su victoria forzada (D-32).
+  - **Jugando segundo, el rendimiento mejora hasta d = 4 y después se estanca:** 20 a 22 de 24 en las abiertas entre d = 4 y d = 7. Las diferencias de 1 o 2 partidas no son concluyentes.
+  - **Más profundidad no siempre es mejor contra un rival que se equivoca.** d = 8 rinde menos que d = 7 (19 contra 22 de 24). Hay 3 aperturas abiertas que d = 7 gana y d = 8 pierde, y ninguna al revés. Revisando una (apertura `15`):
+    - d = 8 detecta en su segunda jugada que la posición está **perdida contra un rival perfecto** (todas las columnas valen −WIN). Desde ahí elige la derrota más lenta (D-28), y Stratego la aprovecha.
+    - d = 7 no llega a ver esa derrota, sigue jugando por la heurística, y Stratego termina equivocándose.
+    - La evaluación de d = 8 es correcta. Lo que falla es el **supuesto de Minimax de que el rival es óptimo**: cuando todas las jugadas pierden contra un rival perfecto, Minimax "se rinde", en vez de elegir la que le deja más chances de error al rival. Es justo lo que modela Expectimax (E4).
+  - **El costo crece unas 3 a 4 veces por nivel**, como en E1. El tiempo máximo crece más rápido que el medio: llega a 37 s por jugada con d = 8, en posiciones abiertas de mitad de partida.
+- **Elección:** **d = 5** como profundidad por defecto para E4 y para el agente que se entrega:
+  - gana todo jugando primero;
+  - de segundo está en la meseta (21 de 24 en las abiertas, lo mismo que d = 4 a d = 7, salvo diferencias no concluyentes);
+  - cuesta 0.11 s por jugada en promedio y 0.8 s como máximo, menos que Stratego.
+  
+  d = 7 dio el mejor número (22 de 24), pero tarda 9 veces más por jugada (hasta 7 s) por una diferencia de una partida.
+- **Alternativas:** profundización iterativa con límite de tiempo (fuera de lo pedido); elegir la profundidad solo por resultado (d = 7) sin mirar el costo.
+- **Evidencia:** `ConnectFour/results/summary_profundidad.csv`, `ConnectFour/results/summary_profundidad_por_apertura.csv`, `ConnectFour/results/summary_profundidad_vacio.csv`, y las series `ConnectFour/results/profundidad_2026112*.json` y `profundidad_vacio_2026112*.json` (con sus `_games.csv`).
+- **Para la figura C4:** V/E/D jugando segundo en las abiertas y tiempo medio y máximo por jugada (escala logarítmica), en función de d.

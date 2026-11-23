@@ -16,6 +16,8 @@ Las partidas corren en paralelo y al final se registra una serie por variante y 
   forzadas según si algún jugador tiene victoria forzada (búsqueda sin heurística).
 - E2 (`heuristicas`, D-31): Minimax d4 con poda y cada función de evaluación de
   heuristics.py contra Stratego(2, 4), con las 49 aperturas de dos jugadas.
+- E3 (`profundidad`, D-33): Minimax con poda y `completa`, profundidades 1 a 8, contra
+  Stratego(2, 4) con las 49 aperturas; `profundidad_vacio` repite desde el tablero vacío.
 
 Uso (desde ConnectFour/):
     python experiments.py poda                      # 50 posiciones, profundidades 1 a 7
@@ -24,6 +26,8 @@ Uso (desde ConnectFour/):
     python experiments.py heuristicas --openings 1 --tag prueba
     python experiments.py aperturas                 # victorias forzadas, profundidades 8 y 10
     python experiments.py heuristicas --split       # resultados por clase de apertura
+    python experiments.py profundidad               # 8 profundidades x 2 turnos x 49 partidas
+    python experiments.py profundidad_vacio         # lo mismo, una partida desde el tablero vacío
 """
 
 import argparse
@@ -179,6 +183,16 @@ SERIES_EXPERIMENTS = {
             "cero", "lineas", "lineas_centro", "amenazas", "capturas", "completa",
             "completa_n3x2", "completa_amenazas50", "completa_capturas10", "completa_centro6"]},
     },
+    "profundidad": {
+        "rival": STRATEGO,
+        "openings": 2,
+        "variants": {f"d{d}": minimax(d, "completa") for d in range(1, 9)},
+    },
+    "profundidad_vacio": {
+        "rival": STRATEGO,
+        "openings": 0,
+        "variants": {f"d{d}": minimax(d, "completa") for d in range(1, 9)},
+    },
 }
 SEATS = ("primero", "segundo")
 
@@ -196,6 +210,7 @@ def run_series_experiment(name, workers, tag, openings=None):
     jobs = [(v, ours, rival, seat, opening, i)
             for v, ours in spec["variants"].items() for seat in SEATS
             for i, opening in enumerate(opening_moves)]
+    jobs.sort(key=lambda job: -job[1].get("depth", 0))  # las más caras primero, para repartir la carga
     print(f"{name}: {len(spec['variants'])} variantes x {len(SEATS)} turnos x {len(opening_moves)} partidas"
           f" = {len(jobs)} partidas, {workers} procesos", flush=True)
     start = time.perf_counter()

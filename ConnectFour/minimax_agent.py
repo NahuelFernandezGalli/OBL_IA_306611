@@ -19,7 +19,7 @@ from search_base import SearchAgent
 class MinimaxAgent(SearchAgent):
     name = "minimax"
 
-    def __init__(self, player, depth=4, heuristic="completa", use_pruning=True, move_order="center"):
+    def __init__(self, player, depth=5, heuristic="completa", use_pruning=True, move_order="center"):
         super().__init__(player, depth, heuristic, move_order)
         self.use_pruning = use_pruning
 

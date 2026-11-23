@@ -1,0 +1,38 @@
+{
+  "run_id": "profundidad_20261123-121944_a633",
+  "timestamp": "2026-11-23T12:19:44",
+  "elapsed_s": 733.23,
+  "config": {
+    "experiment": "profundidad",
+    "tag": "",
+    "ours": {
+      "type": "minimax",
+      "depth": 8,
+      "heuristic": "completa",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "stratego",
+      "arg": 2,
+      "depth": 4
+    },
+    "seat": "segundo",
+    "openings": 2,
+    "variant": "d8",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 23,
+    "draws": 0,
+    "losses": 26,
+    "win_rate": 0.4694,
+    "score": 0.4694,
+    "moves_mean": 11.67,
+    "our_time_per_move_s": 2.78013,
+    "our_time_max_s": 36.70368,
+    "our_nodes_per_move": 44421.4,
+    "rival_time_per_move_s": 0.31295
+  }
+}

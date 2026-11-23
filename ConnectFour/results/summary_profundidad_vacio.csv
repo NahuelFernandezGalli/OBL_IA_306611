@@ -1,0 +1,17 @@
+variant,seat,games,wins,draws,losses,score,moves_mean,time_per_move_ms,nodes_per_move,run_id
+d1,primero,1,1,0,0,1.0,5.0,0.56,8.0,profundidad_vacio_20261123-121202_2359
+d1,segundo,1,0,0,1,0.0,7.0,0.61,8.0,profundidad_vacio_20261123-121202_7ebe
+d2,primero,1,1,0,0,1.0,5.0,1.24,26.0,profundidad_vacio_20261123-121202_b806
+d2,segundo,1,1,0,0,1.0,18.0,2.2,33.0,profundidad_vacio_20261123-121202_80ab
+d3,primero,1,1,0,0,1.0,5.0,8.11,145.0,profundidad_vacio_20261123-121202_bf2c
+d3,segundo,1,1,0,0,1.0,16.0,7.46,113.5,profundidad_vacio_20261123-121202_15c2
+d4,primero,1,1,0,0,1.0,5.0,20.67,368.0,profundidad_vacio_20261123-121202_f640
+d4,segundo,1,1,0,0,1.0,10.0,32.91,606.4,profundidad_vacio_20261123-121202_9979
+d5,primero,1,1,0,0,1.0,5.0,118.37,1940.7,profundidad_vacio_20261123-121202_096e
+d5,segundo,1,1,0,0,1.0,10.0,139.31,2369.4,profundidad_vacio_20261123-121202_7d7b
+d6,primero,1,1,0,0,1.0,5.0,237.55,4720.7,profundidad_vacio_20261123-121202_c557
+d6,segundo,1,1,0,0,1.0,10.0,524.35,9690.4,profundidad_vacio_20261123-121202_171b
+d7,primero,1,1,0,0,1.0,5.0,1001.8,18596.3,profundidad_vacio_20261123-121202_ac7b
+d7,segundo,1,1,0,0,1.0,10.0,1844.1,34875.8,profundidad_vacio_20261123-121202_78d8
+d8,primero,1,1,0,0,1.0,5.0,2210.39,42451.7,profundidad_vacio_20261123-121202_dfc0
+d8,segundo,1,1,0,0,1.0,10.0,6504.9,145493.6,profundidad_vacio_20261123-121202_9fb4

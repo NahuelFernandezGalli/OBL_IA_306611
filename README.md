@@ -78,6 +78,8 @@ python test_search.py                                              # verificacio
 python experiments.py poda                                         # E1: nodos y tiempo con y sin poda (unos 5 min)
 python experiments.py aperturas                                    # victorias forzadas del tablero vacío y de las aperturas
 python experiments.py heuristicas                                  # E2: 10 heurísticas contra Stratego (unos 4 min)
+python experiments.py profundidad                                  # E3: profundidades 1 a 8 contra Stratego
+python experiments.py profundidad_vacio                            # E3 desde el tablero vacío
 python match.py --depth 4 --heuristic completa --rival stratego --openings 1
 python match.py --ours expectimax --depth 3 --rival random --openings 2
 python match.py --no-pruning --depth 4 --rival stratego --seats primero

@@ -205,7 +205,7 @@ def agent_spec(kind, depth, heuristic, use_pruning, move_order):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--ours", default="minimax", choices=["minimax", "expectimax"])
-    p.add_argument("--depth", type=int, default=4)
+    p.add_argument("--depth", type=int, default=5)  # elegida en E3 (D-33)
     p.add_argument("--heuristic", default="completa")  # elegida en E2 (D-31)
     p.add_argument("--no-pruning", action="store_true")
     p.add_argument("--move-order", default="center", choices=["center", "left"])
