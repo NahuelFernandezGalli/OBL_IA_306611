@@ -107,51 +107,55 @@ def _mean(values):
     return statistics.fmean(values) if values else 0.0
 
 
-def run_series(ours, rival, seat, openings=1, experiment="match", tag="", save=True, verbose=True):
-    """Serie de partidas de `ours` contra `rival` con nuestro agente en el turno `seat`."""
+def play_series_game(ours, rival, seat, opening, index):
+    """Una partida de una serie: nuestro agente en el turno `seat`. Devuelve la fila del CSV."""
     our_player = SEAT_PLAYER[seat]
     rival_player = 2 if our_player == 1 else 1
-    games = []
+    agents = {our_player: build_agent(ours, our_player, index),
+              rival_player: build_agent(rival, rival_player, index)}
     start = time.perf_counter()
-    for i, opening in enumerate(openings_list(openings)):
-        agents = {our_player: build_agent(ours, our_player, i), rival_player: build_agent(rival, rival_player, i)}
-        game = play_game(agents, opening)
-        winner = game["winner"]
-        result = 0 if winner == 0 else (1 if winner == our_player else -1)
-        our_stats, rival_stats = game["stats"][our_player], game["stats"][rival_player]
-        our_times = [s["time_s"] for s in our_stats]
-        games.append({
-            "game": i,
-            "opening": "".join(map(str, opening)),
-            "our_player": our_player,
-            "winner": winner,
-            "result": RESULT_NAMES[result],
-            "moves": game["moves"],
-            "our_moves": len(our_stats),
-            "our_time_mean_s": round(_mean(our_times), 5),
-            "our_time_max_s": round(max(our_times, default=0.0), 5),
-            "our_nodes_mean": round(_mean([s["nodes"] for s in our_stats if "nodes" in s]), 1),
-            "rival_time_mean_s": round(_mean([s["time_s"] for s in rival_stats]), 5),
-        })
-    elapsed = time.perf_counter() - start
+    game = play_game(agents, opening)
+    game_s = time.perf_counter() - start
+    winner = game["winner"]
+    result = 0 if winner == 0 else (1 if winner == our_player else -1)
+    our_stats, rival_stats = game["stats"][our_player], game["stats"][rival_player]
+    our_times = [s["time_s"] for s in our_stats]
+    return {
+        "game": index,
+        "opening": "".join(map(str, opening)),
+        "our_player": our_player,
+        "winner": winner,
+        "result": RESULT_NAMES[result],
+        "moves": game["moves"],
+        "our_moves": len(our_stats),
+        "our_time_mean_s": round(_mean(our_times), 5),
+        "our_time_max_s": round(max(our_times, default=0.0), 5),
+        "our_nodes_mean": round(_mean([s["nodes"] for s in our_stats if "nodes" in s]), 1),
+        "rival_time_mean_s": round(_mean([s["time_s"] for s in rival_stats]), 5),
+        "game_s": round(game_s, 3),
+    }
 
+
+def save_series(ours, rival, seat, openings, games, elapsed, experiment="match", tag="",
+                save=True, verbose=True, extra_config=None):
+    """Agrega las partidas de una serie, la registra en results/ (D-26) y la imprime."""
+    games = sorted(games, key=lambda g: g["game"])
     n = len(games)
     wins = sum(g["result"] == "V" for g in games)
     draws = sum(g["result"] == "E" for g in games)
     losses = sum(g["result"] == "D" for g in games)
-    all_times = [g["our_time_mean_s"] for g in games]
     metrics = {
         "games": n, "wins": wins, "draws": draws, "losses": losses,
         "win_rate": round(wins / n, 4),
         "score": round((wins + 0.5 * draws) / n, 4),  # 1 por victoria, 0.5 por empate
         "moves_mean": round(_mean([g["moves"] for g in games]), 2),
-        "our_time_per_move_s": round(_mean(all_times), 5),
+        "our_time_per_move_s": round(_mean([g["our_time_mean_s"] for g in games]), 5),
         "our_time_max_s": round(max(g["our_time_max_s"] for g in games), 5),
         "our_nodes_per_move": round(_mean([g["our_nodes_mean"] for g in games]), 1),
         "rival_time_per_move_s": round(_mean([g["rival_time_mean_s"] for g in games]), 5),
     }
     config = {"experiment": experiment, "tag": tag, "ours": ours, "rival": rival,
-              "seat": seat, "openings": openings}
+              "seat": seat, "openings": openings, **(extra_config or {})}
 
     run_id = None
     if save:
@@ -161,8 +165,17 @@ def run_series(ours, rival, seat, openings=1, experiment="match", tag="", save=T
         print(f"{_label(ours)} vs {_label(rival)} ({seat}, {n} partidas): "
               f"V={wins} E={draws} D={losses}  jugadas={metrics['moves_mean']}  "
               f"t/jugada={metrics['our_time_per_move_s']:.4f}s  nodos/jugada={metrics['our_nodes_per_move']}"
-              f"  [{elapsed:.1f}s]" + (f"  -> {run_id}" if run_id else ""))
+              f"  [{elapsed:.1f}s]" + (f"  -> {run_id}" if run_id else ""), flush=True)
     return {"run_id": run_id, "config": config, "metrics": metrics, "games": games}
+
+
+def run_series(ours, rival, seat, openings=1, experiment="match", tag="", save=True, verbose=True):
+    """Serie de partidas de `ours` contra `rival` con nuestro agente en el turno `seat`."""
+    start = time.perf_counter()
+    games = [play_series_game(ours, rival, seat, opening, i)
+             for i, opening in enumerate(openings_list(openings))]
+    return save_series(ours, rival, seat, openings, games, time.perf_counter() - start,
+                       experiment, tag, save, verbose)
 
 
 def _label(spec):
@@ -193,12 +206,12 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--ours", default="minimax", choices=["minimax", "expectimax"])
     p.add_argument("--depth", type=int, default=4)
-    p.add_argument("--heuristic", default="lineas_centro")
+    p.add_argument("--heuristic", default="completa")  # elegida en E2 (D-31)
     p.add_argument("--no-pruning", action="store_true")
     p.add_argument("--move-order", default="center", choices=["center", "left"])
     p.add_argument("--rival", default="stratego", choices=["stratego", "random", "minimax", "expectimax"])
     p.add_argument("--rival-depth", type=int, default=4)
-    p.add_argument("--rival-heuristic", default="lineas_centro")
+    p.add_argument("--rival-heuristic", default="completa")
     p.add_argument("--seats", nargs="+", default=["primero", "segundo"], choices=list(SEAT_PLAYER))
     p.add_argument("--openings", type=int, default=1, choices=[0, 1, 2])
     p.add_argument("--experiment", default="match")

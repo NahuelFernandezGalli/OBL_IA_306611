@@ -31,7 +31,7 @@ def player_to_move(board):
 class SearchAgent(Agent):
     name = "search"
 
-    def __init__(self, player, depth=4, heuristic="lineas_centro", move_order="center"):
+    def __init__(self, player, depth=4, heuristic="completa", move_order="center"):
         if player not in (1, 2):
             raise ValueError("player tiene que ser 1 o 2")
         self.player = player

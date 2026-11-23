@@ -39,9 +39,11 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-25](#d-25-configuración-y-modelo-final-de-dyna-q) | Acrobot | Configuración y modelo final de Dyna-Q | Vigente |
 | [D-26](#d-26-registro-de-connect-four-una-corrida-es-una-serie-de-partidas) | Connect Four | Registro: una corrida es una serie de partidas | Vigente |
 | [D-27](#d-27-implementación-de-minimax-alpha-beta-y-expectimax) | Connect Four | Implementación de Minimax, Alpha-Beta y Expectimax | Vigente |
-| [D-28](#d-28-funciones-de-evaluación-componentes-y-combinaciones) | Connect Four | Funciones de evaluación: componentes y combinaciones | Vigente (pesos provisionales, se exploran en los experimentos) |
+| [D-28](#d-28-funciones-de-evaluación-componentes-y-combinaciones) | Connect Four | Funciones de evaluación: componentes y combinaciones | Vigente (comparadas en D-31: se elige `completa`) |
 | [D-29](#d-29-rival-stratego-y-diversidad-de-partidas-con-aperturas-forzadas) | Connect Four | Rival Stratego y diversidad de partidas con aperturas forzadas | Vigente |
 | [D-30](#d-30-e1-impacto-de-la-poda-alpha-beta) | Connect Four | E1: impacto de la poda Alpha-Beta | Vigente |
+| [D-31](#d-31-e2-funciones-de-evaluación-contra-stratego) | Connect Four | E2: funciones de evaluación contra Stratego (`completa`) | Vigente |
+| [D-32](#d-32-con-la-regla-de-captura-el-que-empieza-tiene-victoria-forzada) | Connect Four | Con la regla de captura, el que empieza tiene victoria forzada | Vigente |
 
 ---
 
@@ -666,7 +668,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 ### D-28: Funciones de evaluación: componentes y combinaciones
 
-- **Fecha:** 2026-11-22 · **Estado:** Vigente (pesos provisionales, se exploran en los experimentos)
+- **Fecha:** 2026-11-22 · **Estado:** Vigente (comparadas en D-31: se elige `completa`)
 - **Contexto:** con profundidad limitada, los estados no terminales necesitan una evaluación. La letra pide probar varias, combinarlas y ponderarlas. El tablero tiene la regla de captura de `board.py`.
 - **Decisión** (`heuristics.py`): la evaluación es una suma ponderada `h = Σ wₖ·fₖ` de componentes **simétricos** (valor propio − valor rival):
   - `n2` y `n3`: ventanas de 4 (las 69 del tablero) con 2 o 3 fichas propias y el resto vacías, sin fichas rivales.
@@ -699,6 +701,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - Contra Random (10 partidas), `Stratego(2, 4)` gana 10 de 10 jugando primero y 9 de 10 jugando segundo. `Stratego(1, 4)` gana 8 de 10 en cada turno.
   - Desde el tablero vacío, Minimax d4 `lineas_centro` jugando primero le gana en 5 jugadas a `Stratego(2, 4)`: Stratego pone su ficha entre dos fichas nuestras y se la capturan. `Stratego(1, 4)` también pierde: apila fichas en la columna 6 sin bloquear.
   - Con las 7 aperturas de una jugada: Minimax d4 gana 7 de 7 jugando primero, pero solo 5 de 7 jugando segundo (pierde 2). **Stratego es mucho más fuerte cuando juega primero**, así que el turno es la variable más importante de los experimentos.
+- **Complemento (2026-11-23):** las aperturas de dos jugadas no son neutrales: en 25 de las 49 el jugador 1 ya tiene victoria forzada, y desde el tablero vacío también (D-32). Las aperturas se siguen usando, pero los resultados se reportan además separados por clase de apertura. La diferencia entre turnos no es solo que Stratego juegue mejor de primero: el juego favorece al que empieza.
 
 ### D-30: E1: impacto de la poda Alpha-Beta
 
@@ -731,3 +734,54 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Alternativas:** posiciones al azar de `BoardSpace.sample` de la cátedra (muchas están casi llenas o terminadas, donde casi no hay nada que buscar); llegar a d = 8 (sin poda serían unos 3 millones de nodos y 3 minutos por posición, unas 2.5 horas en total, sin cambiar las conclusiones).
 - **Evidencia:** `ConnectFour/results/poda_20261123-085728_087f.json`, `ConnectFour/results/poda_20261123-085728_087f_searches.csv` y `ConnectFour/results/summary_poda.csv`. Corrida total: 319 s con 6 procesos.
 - **Para la figura C1:** nodos por jugada en escala logarítmica (las tres variantes) y tiempo por jugada en función de d, desde `summary_poda.csv`, con la coincidencia del 100 % escrita en la figura.
+
+### D-31: E2: funciones de evaluación contra Stratego
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** la letra pide experimentar con distintas funciones de evaluación, combinándolas y ponderándolas. Hay que compararlas contra Stratego, porque contra Random ganan todas.
+- **Decisión** (`python experiments.py heuristicas`):
+  - **Minimax d = 4 con poda** (la misma profundidad que Stratego) y cada una de las 10 heurísticas: las 6 combinaciones de D-28 más 4 variaciones de pesos de `completa`, cambiando un peso por vez (`n3` × 2, `amenazas` 50, `capturas` 10 y `centro` 6).
+  - Contra `Stratego(2, 4)`, en los dos turnos, sobre las 49 aperturas de dos jugadas: 980 partidas en 214 s con 6 procesos.
+  - Los resultados se separan además por la clase de la apertura (D-32): `python experiments.py heuristicas --split`.
+- **Resultados** (V/E/D; "abiertas" son las 24 aperturas sin victoria forzada de nadie, D-32):
+
+  | Heurística | 1º (49) | 2º (49) | 2º, abiertas (24) | 2º, forzadas para J1 (25) | ms/jugada |
+  |---|---|---|---|---|---|
+  | `cero` | 49/0/0 | 17/0/32 | 15/0/9 | 2/0/23 | 6 |
+  | `lineas` | 49/0/0 | 18/0/31 | 16/0/8 | 2/0/23 | 22 |
+  | `lineas_centro` | 49/0/0 | 17/0/32 | 14/0/10 | 3/0/22 | 20 |
+  | `amenazas` | 49/0/0 | 21/0/28 | 18/0/6 | 3/0/22 | 23 |
+  | `capturas` | 49/0/0 | 22/0/27 | 17/0/7 | 5/0/20 | 20 |
+  | **`completa`** | 49/0/0 | **24/0/25** | **20/0/4** | 4/0/21 | 23 |
+  | `completa_n3x2` | 49/0/0 | 23/0/26 | 20/0/4 | 3/0/22 | 23 |
+  | `completa_amenazas50` | 49/0/0 | 24/0/25 | 20/0/4 | 4/0/21 | 23 |
+  | `completa_capturas10` | 48/0/1 | 22/0/27 | 18/0/6 | 4/0/21 | 24 |
+  | `completa_centro6` | 49/0/0 | 23/0/26 | 19/0/5 | 4/0/21 | 22 |
+
+- **Conclusiones:**
+  - **Jugando primero no se distinguen:** todas ganan las 49 (salvo una derrota de `completa_capturas10`). Stratego juega mal de segundo (D-29) y además en 25 aperturas el jugador 1 tiene victoria forzada (D-32). Las heurísticas se comparan jugando segundo.
+  - **Jugando segundo, en las aperturas abiertas, `completa` es la mejor:** 20 de 24, contra 14 de `lineas_centro` y 15 de `cero`. Sobre las mismas aperturas, `completa` gana 8 que `lineas_centro` pierde, y `lineas_centro` gana solo 1 que `completa` pierde. Contra `cero` también es 8 a 1.
+  - **Aporte de cada componente:** sumarle `amenazas` (+4) o `capturas` (+3) a `lineas_centro` mejora, y las dos juntas mejoran más (+6). `centro` sobre `lineas` no aporta (16 → 14). La regla de captura es la que más pesa en este juego (D-32).
+  - **Con d = 4, sin heurística ya se juega razonable:** `cero` solo ve victorias y derrotas, y en partidas tan cortas y tácticas eso alcanza para casi todo. La heurística se nota en las aperturas abiertas, que son las que duran más.
+  - **Los pesos importan poco cerca de `completa`:** las 4 variaciones dan entre 18 y 20 de 24. Subir `capturas` a 10 empeora un poco (18 de 24 y la única derrota jugando primero): sobrevalorar una captura posible hace que se descuide el resto.
+  - **Costo:** todas las heurísticas cuestan lo mismo (20–24 ms por jugada con d = 4). `cero` es más barata (6 ms), porque muchos valores empatan en 0 y la poda corta mucho más.
+- **Elección:** **`completa`** queda como función de evaluación por defecto para E3 y E4.
+- **Limitación:** son 24 partidas por heurística en la comparación que discrimina; diferencias de 1 o 2 partidas no son concluyentes. La de `completa` contra `lineas_centro` y `cero` (8 a 1 sobre las mismas aperturas) sí es clara.
+- **Evidencia:** `ConnectFour/results/summary_heuristicas.csv`, `ConnectFour/results/summary_heuristicas_por_apertura.csv` y los 20 `ConnectFour/results/heuristicas_20261123-1143*.json` (con sus `_games.csv`).
+
+### D-32: Con la regla de captura, el que empieza tiene victoria forzada
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** en E2 aparecieron derrotas jugando segundo en solo 5 jugadas, y 23 de las 49 aperturas las perdían todas las heurísticas. Revisando una (apertura `01`): la `X` forzada queda pegada a la `O`; Stratego juega en la columna 2, captura y arma `OOO`, y si se bloquea en la 3, juega en la 4, captura otra vez y conecta 4. Nuestro agente lo había visto (valor −1 000 002, derrota segura). No es un error del agente: la apertura ya estaba perdida.
+- **Decisión** (`python experiments.py aperturas`): se clasifican el tablero vacío y las 7 + 49 aperturas con Minimax con poda **sin heurística** (`cero`), con profundidades 8 y 10. Un valor de ±WIN solo puede salir de estados terminales reales, así que **es una victoria forzada demostrada** dentro de esa profundidad, no una estimación.
+- **Resultados** (iguales con d = 8 y d = 10, 81 s en total):
+  - **Tablero vacío: el jugador 1 gana forzado jugando en la columna 3**, en a lo sumo 7 jugadas (valor WIN + 1 con d = 8, WIN + 3 con d = 10 y WIN + 5 con d = 12, que corresponden a la misma victoria en la jugada 7).
+  - **Aperturas de una jugada:** solo la `3` es victoria forzada (para J1); las otras 6 quedan abiertas dentro de la profundidad 10.
+  - **Aperturas de dos jugadas:** 25 son victoria forzada para J1, ninguna para J2, y 24 quedan abiertas.
+- **Consecuencias:**
+  - Con esta regla de captura, Connect Four es **victoria del que empieza**, y en muy pocas jugadas. Nuestro agente, jugando primero con d ≥ 7, debería ganar siempre a cualquier rival (se verifica en E3).
+  - **Jugando segundo contra un rival perfecto no se puede ganar.** Contra Stratego, lo que se mide es cuánto se aprovechan sus errores.
+  - Las comparaciones entre agentes se reportan **separadas por clase de apertura** (forzada para J1 / abierta). Así una apertura que ya decide la partida no esconde diferencias entre agentes.
+  - Stratego, jugando primero con d = 4, a veces no encuentra la victoria forzada: perdimos entre 2 y 5 de las 25 aperturas forzadas para J1 (D-31).
+- **Alternativas:** buscar con más profundidad (d = 12 tarda 34 s por posición y no cambió nada); resolver el juego completo (fuera del alcance del curso y no hace falta para el análisis).
+- **Evidencia:** `ConnectFour/results/aperturas_20261123-114823_0be6.json`, `ConnectFour/results/aperturas_20261123-114823_0be6_openings.csv` y `ConnectFour/results/summary_aperturas.csv`.

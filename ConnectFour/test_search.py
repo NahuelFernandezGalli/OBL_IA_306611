@@ -136,8 +136,9 @@ def test_heuristica_simetrica():
 
 def test_terminales_por_encima_de_la_heuristica():
     """Ganar vale más que cualquier posición no terminal, y perder menos (criterio 1 de AIMA 5.4.1)."""
-    worst_case = sum(abs(w) for w in HEURISTICS["completa"].values()) * 69 * 2
-    assert worst_case < WIN
+    for weights in HEURISTICS.values():
+        worst_case = sum(abs(w) for w in weights.values()) * 69 * 2
+        assert worst_case < WIN
     board = board_from_rows([".......", ".......", ".......", ".......", ".......",
                              "OOOOXXX"])
     board._winner = 1

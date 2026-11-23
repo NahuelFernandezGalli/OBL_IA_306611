@@ -1,0 +1,38 @@
+{
+  "run_id": "heuristicas_20261123-114322_c064",
+  "timestamp": "2026-11-23T11:43:22",
+  "elapsed_s": 85.52,
+  "config": {
+    "experiment": "heuristicas",
+    "tag": "",
+    "ours": {
+      "type": "minimax",
+      "depth": 4,
+      "heuristic": "amenazas",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "stratego",
+      "arg": 2,
+      "depth": 4
+    },
+    "seat": "segundo",
+    "openings": 2,
+    "variant": "amenazas",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 21,
+    "draws": 0,
+    "losses": 28,
+    "win_rate": 0.4286,
+    "score": 0.4286,
+    "moves_mean": 12.53,
+    "our_time_per_move_s": 0.02427,
+    "our_time_max_s": 0.10125,
+    "our_nodes_per_move": 421.4,
+    "rival_time_per_move_s": 0.28077
+  }
+}

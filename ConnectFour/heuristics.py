@@ -46,6 +46,11 @@ HEURISTICS = {
     "amenazas": {"n2": 2, "n3": 5, "centro": 3, "amenazas": 20},
     "capturas": {"n2": 2, "n3": 5, "centro": 3, "capturas": 4},
     "completa": {"n2": 2, "n3": 5, "centro": 3, "amenazas": 20, "capturas": 4},
+    # Variaciones de pesos de "completa", cambiando un peso por vez (E2, D-31).
+    "completa_n3x2": {"n2": 2, "n3": 10, "centro": 3, "amenazas": 20, "capturas": 4},
+    "completa_amenazas50": {"n2": 2, "n3": 5, "centro": 3, "amenazas": 50, "capturas": 4},
+    "completa_capturas10": {"n2": 2, "n3": 5, "centro": 3, "amenazas": 20, "capturas": 10},
+    "completa_centro6": {"n2": 2, "n3": 5, "centro": 6, "amenazas": 20, "capturas": 4},
 }
 
 

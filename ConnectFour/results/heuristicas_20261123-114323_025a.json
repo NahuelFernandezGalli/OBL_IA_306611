@@ -1,0 +1,38 @@
+{
+  "run_id": "heuristicas_20261123-114323_025a",
+  "timestamp": "2026-11-23T11:43:23",
+  "elapsed_s": 38.86,
+  "config": {
+    "experiment": "heuristicas",
+    "tag": "",
+    "ours": {
+      "type": "minimax",
+      "depth": 4,
+      "heuristic": "completa_centro6",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "stratego",
+      "arg": 2,
+      "depth": 4
+    },
+    "seat": "primero",
+    "openings": 2,
+    "variant": "completa_centro6",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 49,
+    "draws": 0,
+    "losses": 0,
+    "win_rate": 1.0,
+    "score": 1.0,
+    "moves_mean": 7.94,
+    "our_time_per_move_s": 0.0205,
+    "our_time_max_s": 0.06317,
+    "our_nodes_per_move": 352.2,
+    "rival_time_per_move_s": 0.25892
+  }
+}
