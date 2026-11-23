@@ -23,8 +23,17 @@ Acrobot/
 ├── results/           registros de experimentos (JSON/CSV)
 └── figures/           gráficos para el informe
 ConnectFour/
-├── board.py, agent.py, connect_four_env.py, play.py, stratego_agent.py
+├── board.py, agent.py, connect_four_env.py, play.py, stratego_agent.py   (cátedra)
 ├── Connect_four.ipynb notebook base de la cátedra
+├── experiment_log.py  registro de series en results/ (copia del de Acrobot)
+├── heuristics.py      funciones de evaluación (componentes y combinaciones)
+├── search_base.py     base común de los agentes de búsqueda
+├── minimax_agent.py   Minimax con o sin poda Alpha-Beta
+├── expectimax_agent.py Expectimax (rival como nodo de azar uniforme)
+├── random_agent.py    rival al azar
+├── match.py           partidas y series contra Stratego, Random u otros agentes
+├── test_search.py     verificaciones de la búsqueda y de las heurísticas
+├── experiments.py     experimentos (E1: impacto de la poda Alpha-Beta)
 ├── results/
 └── figures/
 ```
@@ -60,6 +69,20 @@ Modelo final de Q-Learning: `models/qlearning_final_pes_20261120-204635_c4c6.pkl
 
 `python train.py --help` lista todos los parámetros. Dyna-Q: `python train.py --algorithm dynaq --n-planning 10`. Verificaciones de Dyna-Q: `python test_dynaq.py`. Cada corrida queda registrada en `results/` y, con `--save-model`, el modelo queda en `models/<run_id>.pkl`. Para cargarlo: `agent, discretizer = qlearning.load_model(ruta)`.
 
+## Uso (Connect Four)
+
+Desde `ConnectFour/`:
+
+```bash
+python test_search.py                                              # verificaciones
+python experiments.py poda                                         # E1: nodos y tiempo con y sin poda (unos 5 min)
+python match.py --depth 4 --heuristic completa --rival stratego --openings 1
+python match.py --ours expectimax --depth 3 --rival random --openings 2
+python match.py --no-pruning --depth 4 --rival stratego --seats primero
+```
+
+El rival oficial es `Stratego(2, 4)`, construido como en `play.py` (D-29). `--openings 1` o `2` juega las 7 o 49 aperturas forzadas, y cada turno es una serie aparte.
+
 ## Registro de experimentos
 
 Cada corrida se guarda en `results/` del proyecto correspondiente:
@@ -68,4 +91,4 @@ Cada corrida se guarda en `results/` del proyecto correspondiente:
 - `results/<run_id>_episodes.csv` (Acrobot): una fila por episodio con recompensa, pasos, si se alcanzó el objetivo, ε y `elapsed_s` (tiempo de entrenamiento acumulado, sin las evaluaciones; existe desde la fase 2, D-21).
 - `results/runs.csv`: índice con una fila por corrida (configuración resumida y métricas), usado para comparar y graficar.
 
-En Connect Four cada fila de `results/runs.csv` es una partida: agentes, profundidad, heurística, quién empieza, resultado y tiempo por jugada.
+En Connect Four cada corrida es una **serie** de partidas (D-26): `results/<run_id>.json` (agentes, profundidad, heurística, turno, aperturas y métricas), `results/<run_id>_games.csv` (una fila por partida: resultado, jugadas, tiempo y nodos por jugada) y una fila por serie en `results/runs.csv`.

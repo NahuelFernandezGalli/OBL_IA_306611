@@ -14,7 +14,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 |---|---|---|---|
 | [D-01](#d-01-python-311-y-un-entorno-poetry-por-proyecto) | General | Python 3.11 y un entorno Poetry por proyecto | Vigente |
 | [D-02](#d-02-módulos-propios-junto-a-los-de-la-cátedra) | General | Módulos propios junto a los de la cátedra | Vigente |
-| [D-03](#d-03-formato-del-registro-de-experimentos) | General | Formato del registro de experimentos | Vigente |
+| [D-03](#d-03-formato-del-registro-de-experimentos) | General | Formato del registro de experimentos | Vigente (en Connect Four, el índice es por serie: D-26) |
 | [D-04](#d-04-entrenar-y-evaluar-acrobot-sin-render) | Acrobot | Entrenar y evaluar sin render | Vigente |
 | [D-05](#d-05-línea-base-agente-al-azar-sobre-50-estados-iniciales) | Acrobot | Línea base: agente al azar sobre 50 estados iniciales | Vigente |
 | [D-06](#d-06-representar-el-estado-con-ángulos-en-vez-de-cossin) | Acrobot | Representar el estado con ángulos en vez de cos/sin | Vigente (confirmada por el experimento C) |
@@ -37,6 +37,11 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-23](#d-23-medición-del-aliasing-del-modelo) | Acrobot | Medición del *aliasing* del modelo | Vigente |
 | [D-24](#d-24-α-con-dyna-q-α-bajo-y-n-chico) | Acrobot | α con Dyna-Q: α bajo y *n* chico | Vigente (resultados; la elección va en D-25) |
 | [D-25](#d-25-configuración-y-modelo-final-de-dyna-q) | Acrobot | Configuración y modelo final de Dyna-Q | Vigente |
+| [D-26](#d-26-registro-de-connect-four-una-corrida-es-una-serie-de-partidas) | Connect Four | Registro: una corrida es una serie de partidas | Vigente |
+| [D-27](#d-27-implementación-de-minimax-alpha-beta-y-expectimax) | Connect Four | Implementación de Minimax, Alpha-Beta y Expectimax | Vigente |
+| [D-28](#d-28-funciones-de-evaluación-componentes-y-combinaciones) | Connect Four | Funciones de evaluación: componentes y combinaciones | Vigente (pesos provisionales, se exploran en los experimentos) |
+| [D-29](#d-29-rival-stratego-y-diversidad-de-partidas-con-aperturas-forzadas) | Connect Four | Rival Stratego y diversidad de partidas con aperturas forzadas | Vigente |
+| [D-30](#d-30-e1-impacto-de-la-poda-alpha-beta) | Connect Four | E1: impacto de la poda Alpha-Beta | Vigente |
 
 ---
 
@@ -63,6 +68,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Fecha:** 2026-11-03 · **Estado:** Vigente
 - **Contexto:** la letra pide un registro completo de resultados, con parámetros y tiempos de ejecución, y gráficos en el informe.
 - **Decisión:** cada corrida genera `results/<run_id>.json` (configuración completa, semilla, métricas finales, tiempo). En Acrobot genera además `results/<run_id>_episodes.csv` (una fila por episodio). `results/runs.csv` funciona como índice, con una fila por corrida (o por partida, en Connect Four). El detalle está en el [README](../README.md#registro-de-experimentos).
+- **Cambio (2026-11-22):** en Connect Four, `runs.csv` tiene una fila por **serie** de partidas y no por partida; las partidas van en `<run_id>_games.csv`. Ver D-26.
 - **Justificación:** el JSON hace que cada corrida se pueda reproducir. El CSV por episodio permite graficar curvas de aprendizaje. El índice permite comparar configuraciones sin abrir cada archivo.
 
 ### D-19: Gráficos con matplotlib, generados desde `results/`
@@ -622,4 +628,106 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 ## COUNTER (Connect Four)
 
-_Sin decisiones todavía._
+### D-26: Registro de Connect Four: una corrida es una serie de partidas
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** D-03 preveía una fila de `runs.csv` por partida. Pero lo que se compara es una configuración (agente, rival, turno) sobre varias partidas, igual que en Acrobot se compara una corrida sobre varios episodios.
+- **Decisión** (`ConnectFour/match.py`, `ConnectFour/experiment_log.py`):
+  - Una corrida es una **serie**: nuestro agente contra un rival, desde un turno fijo ("primero" o "segundo") y sobre un conjunto de aperturas (D-29).
+  - `results/<run_id>.json` guarda la configuración de los dos agentes, el turno, las aperturas y las métricas agregadas: victorias, empates, derrotas, `win_rate`, `score` (1 por victoria y 0.5 por empate), jugadas por partida, tiempo medio y máximo por jugada, nodos por jugada y tiempo del rival.
+  - `results/<run_id>_games.csv` tiene una fila por partida: apertura, número de jugador, ganador, resultado (V/E/D), jugadas, tiempo y nodos.
+  - `runs.csv` tiene una fila por serie.
+  - El turno nunca se mezcla: cada serie es de un solo turno.
+  - *(2026-11-23)* Los experimentos que no son partidas usan el mismo esquema con otro sufijo: E1 guarda una fila por búsqueda en `<run_id>_searches.csv` (D-30).
+  - El tiempo por jugada se mide en `play_game`, alrededor de `next_action`, con el mismo criterio para todos los agentes (incluidos Stratego y Random).
+- **Alternativas:** una fila por partida en `runs.csv`, como decía D-03. El índice crecería mucho y para comparar configuraciones habría que agrupar siempre.
+- **Justificación:** es el mismo esquema que Acrobot (corrida → episodios), y `experiment_log.py` es una copia del de Acrobot con un único cambio: el sufijo del CSV de filas (`_games`).
+
+### D-27: Implementación de Minimax, Alpha-Beta y Expectimax
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:** la letra pide Minimax con Alpha-Beta (analizando el impacto de la poda) y Expectimax, para decidir qué técnica conviene.
+- **Decisión** (`search_base.py`, `minimax_agent.py`, `expectimax_agent.py`, `random_agent.py`):
+  - **Forma estándar de AIMA** (5.2, 5.3 y 5.5): `max_value` / `min_value` con α y β; en Expectimax, `max_value` / `chance_value`, donde el nodo de azar es el promedio uniforme sobre las columnas legales del rival.
+  - **Profundidad en plies** (jugadas individuales), igual que Stratego: `depth = 4` mira la jugada propia y las 3 siguientes.
+  - **Flag `use_pruning`** en `MinimaxAgent`: con `False` se recorre el árbol completo. Así el mismo código mide con y sin poda.
+  - **Nodos visitados:** cada llamada a la búsqueda cuenta un nodo, incluidos la raíz y las hojas. Queda en `last_stats` junto con el valor de la raíz, la columna y el tiempo.
+  - **Orden de las columnas fijo**, por defecto central (3, 2, 4, 1, 5, 0, 6); también `left` (0 a 6) para medir el efecto del orden en la poda (AIMA 5.3).
+  - **Desempate:** en la raíz se elige con `>` estricto, así que queda la primera columna en ese orden. Con eso la poda devuelve **el mismo valor y la misma jugada** que Minimax sin poda: las columnas anteriores a la primera óptima valen menos, la primera óptima devuelve su valor exacto (porque es mayor que α) y las siguientes devuelven a lo sumo α.
+  - **Turno por paridad:** las capturas no cambian la cantidad de casillas vacías, así que el jugador al que le toca sale de la paridad de las fichas jugadas. El agente recibe su número de jugador y falla si no le toca a él.
+- **Verificación** (`python test_search.py`, 9 tests, unos 9 s):
+  - con y sin poda dan el mismo valor y la misma columna en 25 posiciones × profundidades 1 a 4 × 3 heurísticas, y con poda se visitan menos nodos o los mismos;
+  - con `use_pruning=False` los nodos coinciden exactamente con un conteo independiente del árbol completo;
+  - con poda se ahorran nodos en al menos 8 de 10 posiciones con profundidad 4;
+  - gana en una jugada (Minimax y Expectimax) y bloquea en una (Minimax con profundidad ≥ 2);
+  - Expectimax con profundidad 2 coincide con el promedio calculado a mano.
+- **Alternativas:** negamax (más corto, pero se aleja de la presentación del curso con MAX y MIN separados); ordenar las jugadas por la heurística o profundización iterativa (fuera del alcance pedido; el orden central fijo ya es el ordenamiento simple de AIMA).
+- **Justificación:** el código sigue el pseudocódigo del curso y se puede defender línea a línea. Los flags y los contadores permiten medir el impacto de la poda sin duplicar código.
+
+### D-28: Funciones de evaluación: componentes y combinaciones
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente (pesos provisionales, se exploran en los experimentos)
+- **Contexto:** con profundidad limitada, los estados no terminales necesitan una evaluación. La letra pide probar varias, combinarlas y ponderarlas. El tablero tiene la regla de captura de `board.py`.
+- **Decisión** (`heuristics.py`): la evaluación es una suma ponderada `h = Σ wₖ·fₖ` de componentes **simétricos** (valor propio − valor rival):
+  - `n2` y `n3`: ventanas de 4 (las 69 del tablero) con 2 o 3 fichas propias y el resto vacías, sin fichas rivales.
+  - `amenazas`: ventanas con 3 propias cuyo hueco se puede jugar ya.
+  - `centro`: fichas en la columna 3.
+  - `capturas`: fichas rivales que se capturarían con una sola jugada (horizontal y diagonal, igual que `board.py`).
+  - **Terminales:** ganar vale `+(WIN + profundidad restante)` y perder `−(WIN + profundidad restante)`, con `WIN = 10⁶`, mayor que cualquier valor heurístico (hay un test con una cota holgada). Entre dos victorias se prefiere la más rápida, y entre dos derrotas la más lenta.
+  - **Combinaciones iniciales:** `cero` (solo terminales, como línea base), `lineas`, `lineas_centro`, `amenazas`, `capturas` y `completa`. Los pesos (2, 5, 3, 20, 4) son un punto de partida y se exploran en los experimentos.
+- **Tres criterios del curso (AIMA 5.4.1):**
+  1. **Ordena los terminales igual que la utilidad:** los terminales no usan la heurística y quedan por encima o por debajo de cualquier no terminal (hay un test).
+  2. **Barata:** una pasada por 69 ventanas, la columna central y 7 casillas jugables, sin búsqueda.
+  3. **Correlacionada con ganar:** cada componente mide una forma concreta de acercarse a 4 en línea o de cambiar el tablero con una captura.
+- **Alternativas:** copiar la heurística de Stratego (cuenta líneas de fichas con huecos de forma poco clara, y no daría información nueva); pesos aprendidos (fuera del alcance del curso).
+- **Justificación:** son componentes simples, explicables y que se pueden activar de a uno, lo que permite medir el aporte de cada uno contra Stratego.
+
+### D-29: Rival Stratego y diversidad de partidas con aperturas forzadas
+
+- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Contexto:**
+  - `play.py` carga `Stratego(2, 4)` como rival. Desofuscado, Stratego es Minimax **sin poda** de profundidad 4, con la heurística `1000·L4 + 3·L3 + 2·L2` (líneas propias menos rivales) y desempate con `>=` (elige la última columna empatada). Es determinista.
+  - **El primer argumento no es su número de jugador:** `Stratego(n, d)` se considera el jugador `(n % 2) + 1`. El `Stratego(2, 4)` de la cátedra se cree jugador 1 aunque juegue segundo.
+  - Como los dos agentes son deterministas, repetir una partida con el mismo turno da siempre la misma partida.
+- **Decisión:**
+  - El rival oficial es **`Stratego(2, 4)`, construido igual que en `play.py`, en los dos turnos**. Es el "campeón" que entrega la cátedra. `Stratego(1, 4)` (que sí se considera jugador 2) queda como dato complementario.
+  - **Aperturas forzadas:** cada serie se juega sobre las 7 aperturas de una jugada o las 49 de dos jugadas (`--openings 1` o `2`), o solo desde el tablero vacío (`--openings 0`). Las jugadas de la apertura no las elige ningún agente.
+  - Random usa una semilla distinta en cada partida (semilla base + índice de la partida).
+- **Alternativas:** desempatar al azar con semilla (cambiaría el agente que se entrega y Stratego seguiría siendo determinista); empezar con jugadas al azar (es equivalente pero menos controlable: la enumeración es exhaustiva y reproducible).
+- **Justificación:** las aperturas dan partidas distintas sin tocar a ninguno de los dos agentes, y enumerarlas todas evita elegir una muestra.
+- **Hallazgo preliminar** (prueba de humo del 2026-11-22, sin registrar; se confirma en los experimentos):
+  - Contra Random (10 partidas), `Stratego(2, 4)` gana 10 de 10 jugando primero y 9 de 10 jugando segundo. `Stratego(1, 4)` gana 8 de 10 en cada turno.
+  - Desde el tablero vacío, Minimax d4 `lineas_centro` jugando primero le gana en 5 jugadas a `Stratego(2, 4)`: Stratego pone su ficha entre dos fichas nuestras y se la capturan. `Stratego(1, 4)` también pierde: apila fichas en la columna 6 sin bloquear.
+  - Con las 7 aperturas de una jugada: Minimax d4 gana 7 de 7 jugando primero, pero solo 5 de 7 jugando segundo (pierde 2). **Stratego es mucho más fuerte cuando juega primero**, así que el turno es la variable más importante de los experimentos.
+
+### D-30: E1: impacto de la poda Alpha-Beta
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** la letra pide analizar el impacto de Alpha-Beta. Hay que medir nodos y tiempo con y sin poda en varias profundidades, y mostrar con evidencia que la poda no cambia la decisión.
+- **Decisión** (`python experiments.py poda`):
+  - **50 posiciones fijas de mitad de partida:** entre 4 y 20 jugadas al azar (semilla 0), descartando las que ya terminaron. Se guardan como secuencias de columnas en el JSON, así que se reconstruyen exactamente.
+  - **Profundidades 1 a 7** y tres variantes: `sin_poda`, `poda_centro` (columnas centrales primero) y `poda_izq` (de izquierda a derecha). Heurística `lineas_centro` en todas.
+  - Se registran por búsqueda los nodos, el tiempo, el valor de la raíz y la columna (`results/<run_id>_searches.csv`, 1050 filas).
+  - **Factor de ramificación efectivo** b\* = (nodos medios)^(1/d), para comparar con la teoría.
+  - Corre en paralelo con 6 procesos (en una máquina de 14 hilos), para que la competencia por la CPU sea baja. Los tiempos son comparables dentro del lote. El costo por nodo fue parejo en todas las profundidades (53 a 66 µs), así que el tiempo es proporcional a los nodos.
+- **Resultados** (medias sobre las 50 posiciones):
+
+  | d | Nodos sin poda | Nodos con poda (centro) | Ahorro | Con poda (izq) | Ahorro | Tiempo sin poda | Tiempo con poda (centro) |
+  |---|---|---|---|---|---|---|---|
+  | 1 | 8 | 8 | 0 % | 8 | 0 % | 0.5 ms | 0.6 ms |
+  | 2 | 52 | 24 | 53.9 % | 32 | 39.0 % | 3.3 ms | 1.3 ms |
+  | 3 | 322 | 86 | 73.4 % | 133 | 58.6 % | 21 ms | 4.9 ms |
+  | 4 | 2 011 | 233 | 88.4 % | 458 | 77.2 % | 128 ms | 13.6 ms |
+  | 5 | 12 365 | 807 | 93.5 % | 1 701 | 86.2 % | 0.75 s | 45 ms |
+  | 6 | 76 024 | 2 090 | 97.2 % | 5 708 | 92.5 % | 4.9 s | 103 ms |
+  | 7 | 461 213 | 7 534 | 98.4 % | 19 664 | 95.7 % | 29.9 s | 490 ms |
+
+- **Conclusiones:**
+  - **La poda no cambia la decisión:** con el orden central, el valor y la columna coinciden con Minimax sin poda en las **350 búsquedas** (50 posiciones × 7 profundidades). Confirma en la práctica el argumento de D-27.
+  - **El ahorro crece con la profundidad:** 54 % en d = 2 y 98.4 % en d = 7 (unas 61 veces menos nodos y tiempo). En d = 1 no hay nada que podar, porque solo se miran las hojas de la raíz. Por posición, el ahorro en d = 7 va de 93.2 % a 100 % (mediana 98.9 %): en algunas posiciones hay una victoria forzada que se encuentra enseguida.
+  - **Efecto práctico:** con un presupuesto de un segundo por jugada, sin poda se llega a d = 5 (0.75 s) y con poda a d = 7 (0.49 s). La poda compra **dos niveles más de profundidad** con el mismo tiempo. Stratego, sin poda y con d = 4, gasta unos 128 ms por jugada, lo mismo que nuestro agente con poda en d = 6 (103 ms).
+  - **El orden de las jugadas importa, como dice AIMA 5.3:** en d = 7, b\* baja de 6.44 sin poda a 3.58 con el orden central y a 4.11 con el orden de izquierda a derecha. Expresado como potencia de b: el orden central da b^0.68, entre el caso perfecto (b^0.5 ≈ 2.5) y el caso aleatorio (b^0.75 ≈ 4.0); el orden de izquierda a derecha queda en b^0.76, como un orden al azar. Mirar primero el centro poda 2.6 veces más que mirar de izquierda a derecha.
+  - **Los empates existen y los desempata el orden, no la poda:** con el orden de izquierda a derecha el valor coincide siempre (350 de 350), pero la columna cambia en 62 de 350 búsquedas (18 %). Son jugadas distintas con el mismo valor minimax. Por eso la comparación de jugadas se hace con el mismo orden.
+- **Alternativas:** posiciones al azar de `BoardSpace.sample` de la cátedra (muchas están casi llenas o terminadas, donde casi no hay nada que buscar); llegar a d = 8 (sin poda serían unos 3 millones de nodos y 3 minutos por posición, unas 2.5 horas en total, sin cambiar las conclusiones).
+- **Evidencia:** `ConnectFour/results/poda_20261123-085728_087f.json`, `ConnectFour/results/poda_20261123-085728_087f_searches.csv` y `ConnectFour/results/summary_poda.csv`. Corrida total: 319 s con 6 procesos.
+- **Para la figura C1:** nodos por jugada en escala logarítmica (las tres variantes) y tiempo por jugada en función de d, desde `summary_poda.csv`, con la coincidencia del 100 % escrita en la figura.
