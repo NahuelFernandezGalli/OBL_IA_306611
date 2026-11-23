@@ -1,0 +1,3 @@
+variant,seat,games,wins,draws,losses,score,moves_mean,time_per_move_ms,nodes_per_move,run_id
+minimax_d5,primero,49,46,0,3,0.9388,10.16,82.71,1444.7,stratego_arg1_20261123-180754_e668
+minimax_d5,segundo,49,48,0,1,0.9796,10.88,99.11,1619.0,stratego_arg1_20261123-180754_353f

@@ -1,0 +1,13 @@
+variant,seat,openings,games,wins,draws,losses,run_id
+minimax_d5,primero,J1,25,25,0,0,expectimax_random_20261123-180251_a30b
+minimax_d5,primero,abierta,24,24,0,0,expectimax_random_20261123-180251_a30b
+minimax_d5,segundo,J1,25,24,0,1,expectimax_random_20261123-180251_5cc9
+minimax_d5,segundo,abierta,24,24,0,0,expectimax_random_20261123-180251_5cc9
+expectimax_d5,primero,J1,25,25,0,0,expectimax_random_20261123-180251_a80a
+expectimax_d5,primero,abierta,24,24,0,0,expectimax_random_20261123-180251_a80a
+expectimax_d5,segundo,J1,25,23,0,2,expectimax_random_20261123-180251_c48d
+expectimax_d5,segundo,abierta,24,24,0,0,expectimax_random_20261123-180251_c48d
+expectimax_d4,primero,J1,25,25,0,0,expectimax_random_20261123-180251_6c3f
+expectimax_d4,primero,abierta,24,24,0,0,expectimax_random_20261123-180251_6c3f
+expectimax_d4,segundo,J1,25,23,0,2,expectimax_random_20261123-180251_b924
+expectimax_d4,segundo,abierta,24,24,0,0,expectimax_random_20261123-180251_b924

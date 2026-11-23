@@ -1,0 +1,5 @@
+variant,seat,openings,games,wins,draws,losses,run_id
+minimax_d5,primero,J1,25,25,0,0,stratego_arg1_20261123-180754_e668
+minimax_d5,primero,abierta,24,21,0,3,stratego_arg1_20261123-180754_e668
+minimax_d5,segundo,J1,25,24,0,1,stratego_arg1_20261123-180754_353f
+minimax_d5,segundo,abierta,24,24,0,0,stratego_arg1_20261123-180754_353f

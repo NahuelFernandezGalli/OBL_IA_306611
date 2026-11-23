@@ -1,0 +1,13 @@
+variant,seat,openings,games,wins,draws,losses,run_id
+minimax_d5,primero,J1,25,25,0,0,minimax_vs_expectimax_20261123-180643_15b2
+minimax_d5,primero,abierta,24,12,0,12,minimax_vs_expectimax_20261123-180643_15b2
+minimax_d5,segundo,J1,25,0,0,25,minimax_vs_expectimax_20261123-180643_4154
+minimax_d5,segundo,abierta,24,12,0,12,minimax_vs_expectimax_20261123-180643_4154
+expectimax_d5,primero,J1,25,25,0,0,minimax_vs_expectimax_20261123-180643_382f
+expectimax_d5,primero,abierta,24,10,0,14,minimax_vs_expectimax_20261123-180643_382f
+expectimax_d5,segundo,J1,25,0,0,25,minimax_vs_expectimax_20261123-180643_7d4f
+expectimax_d5,segundo,abierta,24,6,0,18,minimax_vs_expectimax_20261123-180643_7d4f
+expectimax_d4,primero,J1,25,19,0,6,minimax_vs_expectimax_20261123-180643_1a5a
+expectimax_d4,primero,abierta,24,10,0,14,minimax_vs_expectimax_20261123-180643_1a5a
+expectimax_d4,segundo,J1,25,0,0,25,minimax_vs_expectimax_20261123-180643_0201
+expectimax_d4,segundo,abierta,24,6,0,18,minimax_vs_expectimax_20261123-180643_0201

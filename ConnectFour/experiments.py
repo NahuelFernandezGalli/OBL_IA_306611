@@ -18,6 +18,10 @@ Las partidas corren en paralelo y al final se registra una serie por variante y 
   heuristics.py contra Stratego(2, 4), con las 49 aperturas de dos jugadas.
 - E3 (`profundidad`, D-33): Minimax con poda y `completa`, profundidades 1 a 8, contra
   Stratego(2, 4) con las 49 aperturas; `profundidad_vacio` repite desde el tablero vacío.
+- E4 (`expectimax_random`, `expectimax_stratego`, `minimax_vs_expectimax`, D-34):
+  Minimax d5 contra Expectimax d5 (misma profundidad) y d4 (tiempo parecido), contra
+  Random, contra Stratego y contra Minimax d5, con las 49 aperturas.
+- `stratego_arg1` (D-29): el agente final contra Stratego(1, 4), que sí se considera J2.
 
 Uso (desde ConnectFour/):
     python experiments.py poda                      # 50 posiciones, profundidades 1 a 7
@@ -175,6 +179,18 @@ def minimax(depth=4, heuristic="lineas_centro"):
             "use_pruning": True, "move_order": "center"}
 
 
+def expectimax(depth=5, heuristic="completa"):
+    return {"type": "expectimax", "depth": depth, "heuristic": heuristic, "move_order": "center"}
+
+
+RANDOM = {"type": "random", "seed": 0}  # semilla 0 + índice de la partida (D-29)
+E4_VARIANTS = {
+    "minimax_d5": minimax(5, "completa"),
+    "expectimax_d5": expectimax(5, "completa"),
+    "expectimax_d4": expectimax(4, "completa"),
+}
+
+
 SERIES_EXPERIMENTS = {
     "heuristicas": {
         "rival": STRATEGO,
@@ -192,6 +208,29 @@ SERIES_EXPERIMENTS = {
         "rival": STRATEGO,
         "openings": 0,
         "variants": {f"d{d}": minimax(d, "completa") for d in range(1, 9)},
+    },
+    # E4 (D-34): Minimax d5 contra Expectimax a igual profundidad (d5) y a tiempo
+    # parecido (d4, porque Expectimax no poda), contra cada rival.
+    "expectimax_random": {
+        "rival": RANDOM,
+        "openings": 2,
+        "variants": E4_VARIANTS,
+    },
+    "expectimax_stratego": {
+        "rival": STRATEGO,
+        "openings": 2,
+        "variants": E4_VARIANTS,
+    },
+    "minimax_vs_expectimax": {
+        "rival": minimax(5, "completa"),
+        "openings": 2,
+        "variants": E4_VARIANTS,  # minimax_d5 contra sí mismo es la referencia
+    },
+    # Dato complementario de D-29: Stratego(1, 4) sí se considera el jugador 2.
+    "stratego_arg1": {
+        "rival": {"type": "stratego", "arg": 1, "depth": 4},
+        "openings": 2,
+        "variants": {"minimax_d5": minimax(5, "completa")},
     },
 }
 SEATS = ("primero", "segundo")

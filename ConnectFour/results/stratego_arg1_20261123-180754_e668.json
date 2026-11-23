@@ -1,0 +1,38 @@
+{
+  "run_id": "stratego_arg1_20261123-180754_e668",
+  "timestamp": "2026-11-23T18:07:54",
+  "elapsed_s": 75.25,
+  "config": {
+    "experiment": "stratego_arg1",
+    "tag": "",
+    "ours": {
+      "type": "minimax",
+      "depth": 5,
+      "heuristic": "completa",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "stratego",
+      "arg": 1,
+      "depth": 4
+    },
+    "seat": "primero",
+    "openings": 2,
+    "variant": "minimax_d5",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 46,
+    "draws": 0,
+    "losses": 3,
+    "win_rate": 0.9388,
+    "score": 0.9388,
+    "moves_mean": 10.16,
+    "our_time_per_move_s": 0.08271,
+    "our_time_max_s": 0.40804,
+    "our_nodes_per_move": 1444.7,
+    "rival_time_per_move_s": 0.27716
+  }
+}

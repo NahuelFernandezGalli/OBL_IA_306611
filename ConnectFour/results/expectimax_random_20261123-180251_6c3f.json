@@ -1,0 +1,36 @@
+{
+  "run_id": "expectimax_random_20261123-180251_6c3f",
+  "timestamp": "2026-11-23T18:02:51",
+  "elapsed_s": 24.82,
+  "config": {
+    "experiment": "expectimax_random",
+    "tag": "",
+    "ours": {
+      "type": "expectimax",
+      "depth": 4,
+      "heuristic": "completa",
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "random",
+      "seed": 0
+    },
+    "seat": "primero",
+    "openings": 2,
+    "variant": "expectimax_d4",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 49,
+    "draws": 0,
+    "losses": 0,
+    "win_rate": 1.0,
+    "score": 1.0,
+    "moves_mean": 6.47,
+    "our_time_per_move_s": 0.18182,
+    "our_time_max_s": 0.24374,
+    "our_nodes_per_move": 2406.8,
+    "rival_time_per_move_s": 1e-05
+  }
+}

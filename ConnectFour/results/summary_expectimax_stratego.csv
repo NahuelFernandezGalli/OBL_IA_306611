@@ -1,0 +1,7 @@
+variant,seat,games,wins,draws,losses,score,moves_mean,time_per_move_ms,nodes_per_move,run_id
+minimax_d5,primero,49,49,0,0,1.0,8.31,103.85,1537.8,expectimax_stratego_20261123-180505_8b0b
+minimax_d5,segundo,49,26,0,23,0.5306,11.73,103.0,1532.3,expectimax_stratego_20261123-180505_e029
+expectimax_d5,primero,49,47,0,2,0.9592,6.63,1194.29,16330.5,expectimax_stratego_20261123-180505_adfa
+expectimax_d5,segundo,49,15,0,34,0.3061,9.47,1133.21,15086.7,expectimax_stratego_20261123-180505_4597
+expectimax_d4,primero,49,49,0,0,1.0,8.18,179.0,2405.7,expectimax_stratego_20261123-180505_7822
+expectimax_d4,segundo,49,11,0,38,0.2245,9.92,174.11,2454.7,expectimax_stratego_20261123-180505_eaa1

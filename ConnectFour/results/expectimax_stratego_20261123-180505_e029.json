@@ -1,0 +1,38 @@
+{
+  "run_id": "expectimax_stratego_20261123-180505_e029",
+  "timestamp": "2026-11-23T18:05:05",
+  "elapsed_s": 106.49,
+  "config": {
+    "experiment": "expectimax_stratego",
+    "tag": "",
+    "ours": {
+      "type": "minimax",
+      "depth": 5,
+      "heuristic": "completa",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "stratego",
+      "arg": 2,
+      "depth": 4
+    },
+    "seat": "segundo",
+    "openings": 2,
+    "variant": "minimax_d5",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 26,
+    "draws": 0,
+    "losses": 23,
+    "win_rate": 0.5306,
+    "score": 0.5306,
+    "moves_mean": 11.73,
+    "our_time_per_move_s": 0.103,
+    "our_time_max_s": 0.48057,
+    "our_nodes_per_move": 1532.3,
+    "rival_time_per_move_s": 0.31557
+  }
+}

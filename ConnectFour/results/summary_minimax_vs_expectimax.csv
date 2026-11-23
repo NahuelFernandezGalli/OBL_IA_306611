@@ -1,0 +1,7 @@
+variant,seat,games,wins,draws,losses,score,moves_mean,time_per_move_ms,nodes_per_move,run_id
+minimax_d5,primero,49,37,0,12,0.7551,10.59,91.54,1374.3,minimax_vs_expectimax_20261123-180643_15b2
+minimax_d5,segundo,49,12,0,37,0.2449,10.59,116.2,1635.7,minimax_vs_expectimax_20261123-180643_4154
+expectimax_d5,primero,49,35,0,14,0.7143,8.84,1088.56,15902.7,minimax_vs_expectimax_20261123-180643_382f
+expectimax_d5,segundo,49,6,0,43,0.1224,8.39,1010.71,14504.0,minimax_vs_expectimax_20261123-180643_7d4f
+expectimax_d4,primero,49,29,0,20,0.5918,10.02,165.42,2423.9,minimax_vs_expectimax_20261123-180643_1a5a
+expectimax_d4,segundo,49,6,0,43,0.1224,8.63,161.17,2423.0,minimax_vs_expectimax_20261123-180643_0201

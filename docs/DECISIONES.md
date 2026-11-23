@@ -45,6 +45,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-31](#d-31-e2-funciones-de-evaluación-contra-stratego) | Connect Four | E2: funciones de evaluación contra Stratego (`completa`) | Vigente |
 | [D-32](#d-32-con-la-regla-de-captura-el-que-empieza-tiene-victoria-forzada) | Connect Four | Con la regla de captura, el que empieza tiene victoria forzada | Vigente |
 | [D-33](#d-33-e3-profundidad-contra-rendimiento) | Connect Four | E3: profundidad contra rendimiento (d = 5) | Vigente |
+| [D-34](#d-34-e4-minimax-contra-expectimax-y-elección-de-la-técnica) | Connect Four | E4: Minimax contra Expectimax; se elige Minimax con Alpha-Beta | Vigente |
 
 ---
 
@@ -703,6 +704,11 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - Desde el tablero vacío, Minimax d4 `lineas_centro` jugando primero le gana en 5 jugadas a `Stratego(2, 4)`: Stratego pone su ficha entre dos fichas nuestras y se la capturan. `Stratego(1, 4)` también pierde: apila fichas en la columna 6 sin bloquear.
   - Con las 7 aperturas de una jugada: Minimax d4 gana 7 de 7 jugando primero, pero solo 5 de 7 jugando segundo (pierde 2). **Stratego es mucho más fuerte cuando juega primero**, así que el turno es la variable más importante de los experimentos.
 - **Complemento (2026-11-23):** las aperturas de dos jugadas no son neutrales: en 25 de las 49 el jugador 1 ya tiene victoria forzada, y desde el tablero vacío también (D-32). Las aperturas se siguen usando, pero los resultados se reportan además separados por clase de apertura. La diferencia entre turnos no es solo que Stratego juegue mejor de primero: el juego favorece al que empieza.
+- **Confirmación del número de jugador (2026-11-23,** `python experiments.py stratego_arg1`**):** el agente final (Minimax d5, `completa`) contra `Stratego(1, 4)`, que se cree jugador 2, sobre las 49 aperturas:
+  - nosotros primero (Stratego juega segundo, el turno que coincide con lo que cree): 46/0/3, con las 3 derrotas en aperturas abiertas (21/0/3);
+  - nosotros segundo (Stratego juega primero, sin coincidir): 48/0/1.
+  
+  Es el espejo de `Stratego(2, 4)`, que contra el mismo agente da 49/0/0 jugando nosotros primero y 26/0/23 jugando segundo (D-34). **Stratego solo juega bien en el turno que coincide con el número de jugador que cree tener.** El `Stratego(2, 4)` de la cátedra, en `play.py`, juega segundo, que es justo su turno débil. Por eso la prueba exigente es la combinación de los dos: jugando segundo contra `Stratego(2, 4)` (21 de 24 abiertas) y jugando primero contra `Stratego(1, 4)` (21 de 24 abiertas). Evidencia: `ConnectFour/results/summary_stratego_arg1.csv` y `summary_stratego_arg1_por_apertura.csv`.
 
 ### D-30: E1: impacto de la poda Alpha-Beta
 
@@ -826,3 +832,38 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Alternativas:** profundización iterativa con límite de tiempo (fuera de lo pedido); elegir la profundidad solo por resultado (d = 7) sin mirar el costo.
 - **Evidencia:** `ConnectFour/results/summary_profundidad.csv`, `ConnectFour/results/summary_profundidad_por_apertura.csv`, `ConnectFour/results/summary_profundidad_vacio.csv`, y las series `ConnectFour/results/profundidad_2026112*.json` y `profundidad_vacio_2026112*.json` (con sus `_games.csv`).
 - **Para la figura C4:** V/E/D jugando segundo en las abiertas y tiempo medio y máximo por jugada (escala logarítmica), en función de d.
+
+### D-34: E4: Minimax contra Expectimax, y elección de la técnica
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** la letra pide implementar Minimax y Expectimax para decidir cuál es la mejor técnica en este juego. En teoría:
+  - Expectimax supone que el rival juega al azar (nodo de azar con promedio), así que debería ser mejor contra Random.
+  - Minimax supone un rival óptimo, y Stratego es un minimax determinista, así que debería ser mejor contra Stratego.
+  - Además, en E3 apareció la hipótesis de que Expectimax no "se rinde" ante una derrota forzada y podría aprovechar mejor los errores de Stratego (D-33).
+- **Decisión** (`python experiments.py expectimax_random`, `expectimax_stratego` y `minimax_vs_expectimax`):
+  - Tres agentes, todos con `completa` (D-31):
+    - **Minimax d5** con poda (D-33);
+    - **Expectimax d5**, a la misma profundidad;
+    - **Expectimax d4**, con un tiempo por jugada parecido, porque Expectimax no poda.
+    
+    Es la misma idea que en Dyna-Q: comparar con el mismo presupuesto de búsqueda y con el mismo tiempo.
+  - Cada uno juega contra Random, contra `Stratego(2, 4)` y contra Minimax d5 (en este último caso, Minimax d5 contra sí mismo es la referencia). Siempre en los dos turnos y sobre las 49 aperturas: 882 partidas en 296 s con 6 procesos.
+- **Resultados** (V/E/D; entre paréntesis, las 24 aperturas abiertas, D-32):
+
+  | Agente | ms/jugada | Random, 1º | Random, 2º | Stratego, 1º | Stratego, 2º | Minimax d5, 1º | Minimax d5, 2º |
+  |---|---|---|---|---|---|---|---|
+  | **Minimax d5** | **~95** | 49/0/0 | 48/0/1 | 49/0/0 | **26/0/23 (21/0/3)** | 37/0/12 (12/0/12) | 12/0/37 (12/0/12) |
+  | Expectimax d5 | ~1150 | 49/0/0 | 47/0/2 | 47/0/2 | 15/0/34 (15/0/9) | 35/0/14 (10/0/14) | 6/0/43 (6/0/18) |
+  | Expectimax d4 | ~175 | 49/0/0 | 47/0/2 | 49/0/0 | 11/0/38 (11/0/13) | 29/0/20 (10/0/14) | 6/0/43 (6/0/18) |
+
+  Jugadas por partida contra Random: Minimax 7.1 (1º) y 8.0 (2º); Expectimax d5 6.4 y 7.4; Expectimax d4 6.5 y 7.4.
+- **Conclusiones:**
+  - **Contra Random ganan todos**: las pocas derrotas son aperturas con victoria forzada para el jugador 1, en las que Random encontró la captura ganadora por casualidad. **Expectimax gana más rápido** (alrededor de 0.6 jugadas menos por partida). Es lo que predice la teoría: contra un rival al azar, apuesta a jugadas que ganan "en promedio", aunque un rival óptimo las podría frenar.
+  - **Contra Stratego, Minimax es claramente mejor:** jugando segundo, en las aperturas abiertas gana 21 de 24, contra 15 (Expectimax d5) y 11 (Expectimax d4). Jugando primero, Expectimax d5 incluso pierde 2 aperturas abiertas. El modelo del rival importa: Stratego no juega al azar, castiga las jugadas arriesgadas, y el promedio de Expectimax subestima ese riesgo.
+  - **Mano a mano, Minimax también gana:** en las aperturas abiertas, Minimax contra sí mismo queda 12 a 12. Expectimax d5 gana solo 10 de 24 jugando primero y 6 de 24 jugando segundo. Expectimax d4, además, no convierte 6 de las 25 aperturas con victoria forzada jugando primero.
+  - **Se refuta la hipótesis de E3:** en las aperturas que ya están perdidas jugando segundo contra Stratego, Expectimax ganó 0 de 25 y Minimax 5 de 25. Expectimax no aprovecha mejor los errores de Stratego, porque espera errores al azar y Stratego no se equivoca así.
+  - **Costo:** a la misma profundidad, Expectimax visita unas 10 veces más nodos (16 000 contra 1 500 por jugada) y tarda unas 11 veces más, porque un promedio necesita todos los hijos y no se puede podar. A igual tiempo (Expectimax d4), es todavía peor.
+- **Elección de la técnica:** **Minimax con poda Alpha-Beta**, d = 5 y `completa`. Es mejor o igual en todos los enfrentamientos, salvo en la velocidad para ganarle a Random, y unas 10 veces más barato. Su modelo del rival (óptimo) es el correcto contra Stratego, que es el rival que pide la letra. Expectimax solo convendría si el rival jugara realmente al azar.
+- **Alternativas:** Expectimax con un modelo del rival que no sea uniforme (por ejemplo, dándole más probabilidad a las jugadas que la heurística considera buenas). Va más allá del Expectimax estándar del curso y no se probó.
+- **Evidencia:** `ConnectFour/results/summary_expectimax_random.csv`, `summary_expectimax_stratego.csv`, `summary_minimax_vs_expectimax.csv` y sus `_por_apertura.csv`, más las 18 series `expectimax_random_*`, `expectimax_stratego_*` y `minimax_vs_expectimax_*` en `ConnectFour/results/`.
+- **Para la figura C2:** V/E/D en barras apiladas por rival y por turno, para los tres agentes, separando las aperturas abiertas.

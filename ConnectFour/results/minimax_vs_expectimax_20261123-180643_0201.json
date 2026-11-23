@@ -1,0 +1,39 @@
+{
+  "run_id": "minimax_vs_expectimax_20261123-180643_0201",
+  "timestamp": "2026-11-23T18:06:43",
+  "elapsed_s": 43.47,
+  "config": {
+    "experiment": "minimax_vs_expectimax",
+    "tag": "",
+    "ours": {
+      "type": "expectimax",
+      "depth": 4,
+      "heuristic": "completa",
+      "move_order": "center"
+    },
+    "rival": {
+      "type": "minimax",
+      "depth": 5,
+      "heuristic": "completa",
+      "use_pruning": true,
+      "move_order": "center"
+    },
+    "seat": "segundo",
+    "openings": 2,
+    "variant": "expectimax_d4",
+    "workers": 6
+  },
+  "metrics": {
+    "games": 49,
+    "wins": 6,
+    "draws": 0,
+    "losses": 43,
+    "win_rate": 0.1224,
+    "score": 0.1224,
+    "moves_mean": 8.63,
+    "our_time_per_move_s": 0.16117,
+    "our_time_max_s": 0.26139,
+    "our_nodes_per_move": 2423.0,
+    "rival_time_per_move_s": 0.09789
+  }
+}
