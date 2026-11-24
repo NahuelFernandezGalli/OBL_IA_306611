@@ -1,0 +1,4 @@
+variant,n_seeds,n_states,mean_steps_mean,mean_steps_std,success_rate_mean,success_rate_std,curve_mean_steps_mean,curve_mean_steps_std,visited_states_mean,visited_states_std,train_time_s_mean,train_time_s_std,learn_time_s_mean,learn_time_s_std
+ql_10000,5,3600,212.89,38.829,1.0,0.0,353.21,12.05,0.53,0.01,715.606,27.659,662.922,26.445
+dynaq_10000,5,3600,163.414,19.12,1.0,0.0,158.649,6.206,0.615,0.009,427.884,9.859,403.95,9.163
+ql_40000,5,3600,288.412,146.708,0.898,0.199,253.315,1.905,0.606,0.007,1529.784,21.296,1418.968,21.262

@@ -58,14 +58,22 @@ Desde `Acrobot/`, con el entorno activado (o anteponiendo `poetry run`):
 
 ```bash
 python baseline.py --episodes 50                  # línea base al azar
-python train.py --save-model                      # Q-Learning con la configuración final (40000 episodios)
+python train.py --save-model                      # Q-Learning con la configuración final (10000 episodios)
+python train.py --algorithm dynaq --save-model    # Dyna-Q con la configuración final
+python evaluate_model.py --random                 # agente al azar sobre los 1000 estados de prueba
+python plots.py                                   # figuras en figures/, leídas de results/
 python train.py --bins 10 --omega1-max 6 --omega2-max 12 --alpha 0.2 --tag prueba
 python sweep.py bins                              # un experimento: variantes x 5 semillas
 python sweep.py bins --summary                    # solo la tabla resumen de lo ya corrido
 python evaluate_model.py models/<run_id>.pkl --render 3   # evaluar y ver el modelo
 ```
 
-Modelo final de Q-Learning: `models/qlearning_final_pes_20261120-204635_c4c6.pkl`, con inicialización pesimista Q₀ = −100 por indicación del docente (218 pasos medios y 99.9 % de éxito sobre 1000 estados de prueba). `models/qlearning_final_20261120-154018_3f81.pkl` es la referencia con Q₀ = 0 (142 pasos y 99.6 %). El porqué de cada decisión está en `docs/DECISIONES.md`.
+Modelos entregados, los dos con inicialización pesimista Q₀ = −100 por indicación del docente. Los números son sobre 1000 estados de prueba:
+
+- Q-Learning: `models/qlearning_final_rango10k_20261123-211904_5a2f.pkl` (172 pasos medios y 99.9 % de éxito).
+- Dyna-Q: `models/dynaq_final_rango_20261123-211208_4a66.pkl` (141 pasos y 99.9 %).
+
+`models/qlearning_final_20261120-154018_3f81.pkl` es la referencia con Q₀ = 0 (142 pasos y 99.6 %). Los demás modelos de `models/` son versiones anteriores (D-38). El porqué de cada decisión está en `docs/DECISIONES.md`.
 
 `python train.py --help` lista todos los parámetros. Dyna-Q: `python train.py --algorithm dynaq --n-planning 10`. Verificaciones de Dyna-Q: `python test_dynaq.py`. Cada corrida queda registrada en `results/` y, con `--save-model`, el modelo queda en `models/<run_id>.pkl`. Para cargarlo: `agent, discretizer = qlearning.load_model(ruta)`.
 

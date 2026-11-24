@@ -23,20 +23,20 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-09](#d-09-métrica-de-evaluación-política-greedy-sobre-estados-iniciales-fijos) | Acrobot | Métrica: política greedy sobre estados iniciales fijos | Vigente |
 | [D-10](#d-10-formato-del-modelo-guardado) | Acrobot | Formato del modelo guardado | Vigente |
 | [D-11](#d-11-metodología-de-los-barridos-5-semillas-y-presupuesto-fijo-de-episodios) | Acrobot | Barridos: 5 semillas y presupuesto fijo de episodios | Vigente |
-| [D-12](#d-12-rango-de-las-velocidades-la-mitad-de-los-límites-del-entorno) | Acrobot | Rango de velocidades: la mitad de los límites del entorno | Vigente |
+| [D-12](#d-12-rango-de-las-velocidades-la-mitad-de-los-límites-del-entorno) | Acrobot | Rango de velocidades: la mitad de los límites del entorno | Vigente con Q₀ = 0; reemplazada por D-38 con Q₀ = −100 |
 | [D-13](#d-13-cantidad-de-bins-8-por-ángulo-y-12-por-velocidad) | Acrobot | Cantidad de bins: 8 por ángulo y 12 por velocidad | Reemplazada por D-18 (con Q₀ = −100) |
 | [D-14](#d-14-barridos-de-α-γ-y-ε-de-a-un-parámetro) | Acrobot | Barridos de α, γ y ε, de a un parámetro | Vigente (resultados; la elección final va en D-15) |
 | [D-15](#d-15-hiperparámetros-finales-y-modelo-final-de-q-learning) | Acrobot | Hiperparámetros y modelo final de Q-Learning | Reemplazada por D-17 y D-18 (se entrenó con Q₀ = 0) |
 | [D-16](#d-16-base-congelada-para-los-experimentos) | Acrobot | Base congelada para los experimentos | Vigente |
 | [D-17](#d-17-inicialización-de-la-tabla-q) | Acrobot | Inicialización de la tabla Q: Q₀ = −100 (pesimista) | Vigente |
-| [D-18](#d-18-re-ajuste-de-hiperparámetros-con-q₀--100) | Acrobot | Re-ajuste de hiperparámetros con Q₀ = −100 y modelo final | Vigente |
+| [D-18](#d-18-re-ajuste-de-hiperparámetros-con-q₀--100) | Acrobot | Re-ajuste de hiperparámetros con Q₀ = −100 y modelo final | Vigente; el rango, los episodios y el modelo cambian en D-38 |
 | [D-19](#d-19-gráficos-con-matplotlib-generados-desde-results) | General | Gráficos con matplotlib, generados desde `results/` | Vigente |
 | [D-20](#d-20-implementación-de-dyna-q) | Acrobot | Implementación de Dyna-Q | Vigente |
 | [D-21](#d-21-tiempo-de-entrenamiento-por-episodio-y-comparación-en-el-mismo-lote) | Acrobot | Tiempo por episodio y comparación en el mismo lote | Vigente |
 | [D-22](#d-22-barrido-de-n-pasos-de-planning) | Acrobot | Barrido de *n* (pasos de *planning*) | Vigente (resultados; α se revisa en D-24) |
 | [D-23](#d-23-medición-del-aliasing-del-modelo) | Acrobot | Medición del *aliasing* del modelo | Vigente |
 | [D-24](#d-24-α-con-dyna-q-α-bajo-y-n-chico) | Acrobot | α con Dyna-Q: α bajo y *n* chico | Vigente (resultados; la elección va en D-25) |
-| [D-25](#d-25-configuración-y-modelo-final-de-dyna-q) | Acrobot | Configuración y modelo final de Dyna-Q | Vigente |
+| [D-25](#d-25-configuración-y-modelo-final-de-dyna-q) | Acrobot | Configuración y modelo final de Dyna-Q | Vigente; el rango y el modelo cambian en D-38 |
 | [D-26](#d-26-registro-de-connect-four-una-corrida-es-una-serie-de-partidas) | Connect Four | Registro: una corrida es una serie de partidas | Vigente |
 | [D-27](#d-27-implementación-de-minimax-alpha-beta-y-expectimax) | Connect Four | Implementación de Minimax, Alpha-Beta y Expectimax | Vigente |
 | [D-28](#d-28-funciones-de-evaluación-componentes-y-combinaciones) | Connect Four | Funciones de evaluación: componentes y combinaciones | Vigente (comparadas en D-31: se elige `completa`) |
@@ -46,6 +46,10 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-32](#d-32-con-la-regla-de-captura-el-que-empieza-tiene-victoria-forzada) | Connect Four | Con la regla de captura, el que empieza tiene victoria forzada | Vigente |
 | [D-33](#d-33-e3-profundidad-contra-rendimiento) | Connect Four | E3: profundidad contra rendimiento (d = 5) | Vigente |
 | [D-34](#d-34-e4-minimax-contra-expectimax-y-elección-de-la-técnica) | Connect Four | E4: Minimax contra Expectimax; se elige Minimax con Alpha-Beta | Vigente |
+| [D-35](#d-35-prueba-con-los-pasos-de-cada-estado-y-agente-al-azar-sobre-los-mismos-estados) | Acrobot | Prueba con los pasos de cada estado y agente al azar sobre los mismos estados | Vigente |
+| [D-36](#d-36-rangos-y-representación-repetidos-con-q₀--100) | Acrobot | Rangos y representación repetidos con Q₀ = −100 | Vigente (llevó a D-38) |
+| [D-37](#d-37-figuras-de-acrobot-plotspy) | Acrobot | Figuras de Acrobot (`plots.py`) | Vigente |
+| [D-38](#d-38-rango-510-y-10-000-episodios-para-la-configuración-final) | Acrobot | Rango 5/10 y 10 000 episodios para la configuración final; modelos nuevos | Vigente |
 
 ---
 
@@ -113,6 +117,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 - **Uso:** −700 es el piso de los gráficos. Los rangos medidos son el insumo de D-07.
 - **Evidencia:** `Acrobot/results/random_20261119-182717_e5db.json`.
+- **Agregado (2026-11-23):** sobre los 1000 estados de prueba, el agente al azar llega el **5.8 %** de las veces (D-35). Los 50 estados de esta línea base eran pocos para ver esos casos. El piso de los gráficos sigue siendo 700.
 
 ### D-06: Representar el estado con ángulos en vez de cos/sin
 
@@ -205,7 +210,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 ### D-12: Rango de las velocidades: la mitad de los límites del entorno
 
-- **Fecha:** 2026-11-20 · **Estado:** Vigente · **Reemplaza** la parte de rangos de D-07.
+- **Fecha:** 2026-11-20 · **Estado:** Vigente para Q₀ = 0. **Reemplazada por D-38** para la configuración final con Q₀ = −100 (2026-11-23). · **Reemplaza** la parte de rangos de D-07.
 - **Contexto:** con los límites teóricos solo se visitaba el 13 % de la tabla (D-07). Achicar el rango da más resolución en las velocidades frecuentes. A cambio, las velocidades que superan el rango caen todas en el bin extremo y quedan mezcladas.
 - **Experimento A** (10 bins por dimensión, ángulos, 5 semillas, 5000 episodios):
 
@@ -223,6 +228,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - Los rangos estrechos empeoran claramente. El del agente al azar es el peor en todas las métricas, aunque visita el 72 % de la tabla. El agente entrenado gira mucho más rápido que uno al azar (p99 de |ω2| ≈ 10 contra 5.9), así que todos los estados de alta velocidad, justo los del balanceo final, caen en el bin extremo y se mezclan (*aliasing*). El rango de 5/10 tuvo una semilla que colapsó (44 % de éxito).
   - **Visitar más celdas no implica aprender mejor:** lo que importa es que la resolución esté donde están las decisiones.
 - **Evidencia:** `Acrobot/results/summary_rangos.csv` y las corridas `Acrobot/results/rangos_*`.
+- **Agregado (2026-11-23):** todo esto es con Q₀ = 0. Repetido con Q₀ = −100 y la configuración final, **el mejor rango es el del agente entrenado (5 / 10), no la mitad** (D-36).
 
 ### D-13: Cantidad de bins: 8 por ángulo y 12 por velocidad
 
@@ -364,7 +370,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 ### D-18: Re-ajuste de hiperparámetros con Q₀ = −100
 
-- **Fecha:** 2026-11-20 · **Estado:** Vigente · **Reemplaza** a D-13 (bins) y a D-15 (hiperparámetros) para la configuración final.
+- **Fecha:** 2026-11-20 · **Estado:** Vigente (α, bins y ε). **Cambiados en D-38 (2026-11-23):** el rango de las velocidades (5/10), los episodios (10 000) y el modelo entregado. · **Reemplaza** a D-13 (bins) y a D-15 (hiperparámetros) para la configuración final.
 - **Contexto:** con la inicialización pesimista (D-17), la dinámica de aprendizaje es otra. Con Q₀ = 0, el agente exploraba porque lo no probado parecía mejor. Con Q₀ = −100, la tabla solo se mueve cuando el valor de alguna llegada al objetivo se propaga hacia atrás, celda por celda (D-17). Los valores elegidos con Q₀ = 0 no tienen por qué seguir siendo los mejores. Se vuelven a ajustar uno por vez, en este orden: α, bins, ε. Se usan 5 semillas y 10 000 episodios, porque con 5000 casi no aprende. La "curva por bloques" es la media de la evaluación greedy en cada bloque de 1000 episodios.
 - **α** (bins (8, 8, 12, 12), decay 0.999):
 
@@ -602,7 +608,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 
 ### D-25: Configuración y modelo final de Dyna-Q
 
-- **Fecha:** 2026-11-22 · **Estado:** Vigente
+- **Fecha:** 2026-11-22 · **Estado:** Vigente (n = 2 y α = 0.05). **Cambiados en D-38 (2026-11-23):** el rango de las velocidades (5/10) y el modelo entregado.
 - **Contexto:** los barridos de *n* (D-22) y de α (D-24) dejan una meseta: *n* ∈ {1, 2} con α entre 0.03 y 0.05, todas entre 160 y 170 pasos.
 - **Decisión** (`DYNAQ_CONFIG` en `train.py`, se usa con `python train.py --algorithm dynaq`):
   - **n = 2 y α = 0.05.** Dentro de la meseta es la variante con menos desvío entre semillas (169.5 ± 11.5 pasos finales, 172.5 ± 7.1 en la curva) y la única cuyas 5 semillas quedan todas por debajo de 190 pasos.
@@ -867,3 +873,133 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 - **Alternativas:** Expectimax con un modelo del rival que no sea uniforme (por ejemplo, dándole más probabilidad a las jugadas que la heurística considera buenas). Va más allá del Expectimax estándar del curso y no se probó.
 - **Evidencia:** `ConnectFour/results/summary_expectimax_random.csv`, `summary_expectimax_stratego.csv`, `summary_minimax_vs_expectimax.csv` y sus `_por_apertura.csv`, más las 18 series `expectimax_random_*`, `expectimax_stratego_*` y `minimax_vs_expectimax_*` en `ConnectFour/results/`.
 - **Para la figura C2:** V/E/D en barras apiladas por rival y por turno, para los tres agentes, separando las aperturas abiertas.
+
+### D-35: Prueba con los pasos de cada estado y agente al azar sobre los mismos estados
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** la figura A4 (distribución de pasos en la prueba) necesita los pasos de cada uno de los 1000 estados de prueba. `evaluate_model.py` guardaba solo agregados (media, desvío y éxito). Además, la línea base al azar (D-05) usaba otros 50 estados, así que no se podía comparar estado por estado con los modelos.
+- **Decisión:**
+  - `train.evaluate(..., per_episode=True)` agrega `min_steps`, `max_steps`, `steps_per_episode` y `success_per_episode`. Por defecto está apagado, así que los JSON de entrenamiento (`eval_curve` y la evaluación final) no cambian.
+  - `evaluate_model.py` lo usa siempre, y con `--random` evalúa un agente al azar (semilla 0) con la misma función y sobre los **mismos 1000 estados de prueba** (semillas desde 2 000 000). Se guarda en `results/random_test.json`.
+  - Se volvieron a evaluar los cuatro modelos guardados.
+- **Verificación:** en los cuatro modelos, la media, el desvío, la tasa de éxito y los pasos de los episodios exitosos coinciden **exactamente** con los `_test.json` anteriores. La evaluación greedy es reproducible: el desempate al azar (D-09) arranca de la misma semilla al cargar el modelo.
+- **Resultados** (1000 estados de prueba):
+
+  | Agente | Pasos medios | Mín. | Máx. | Éxito |
+  |---|---|---|---|---|
+  | Dyna-Q final (`dynaq_final_20261122-182339_bbc2`) | 183.2 | 98 | 476 | 100 % |
+  | Q-Learning final, Q₀ = −100 (`qlearning_final_pes_20261120-204635_c4c6`) | 218.2 | 121 | 700 | 99.9 % |
+  | Q-Learning, Q₀ = 0 (`qlearning_final_20261120-154018_3f81`) | 142.1 | 88 | 700 | 99.6 % |
+  | Primer modelo (`qlearning_base_20261119-183046_14cb`) | 199.8 | 99 | 700 | 99.0 % |
+  | Al azar | 693.2 | 320 | 700 | 5.8 % |
+
+- **Hallazgo:** el agente al azar **a veces llega** (58 de 1000, con 583 pasos de media entre los que llegan). En los 50 estados de D-05 no había pasado nunca. No cambia ninguna conclusión, pero la línea base correcta para el informe es esta: 5.8 % de éxito sobre los mismos estados que los modelos.
+- **Observación:** Dyna-Q es el único modelo que llega en todos los estados de prueba, y también es el que tiene el peor caso más bajo (476 pasos).
+- **Evidencia:** `Acrobot/results/*_test.json` (los cuatro modelos y `random_test.json`).
+
+### D-36: Rangos y representación repetidos con Q₀ = −100
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente. La representación queda confirmada, y el rango cambia a 5/10 en D-38.
+- **Contexto:** el rango de las velocidades (D-12) y la representación (D-06, experimento C) se eligieron con Q₀ = 0. Después del cambio a Q₀ = −100 (D-17) se re-ajustaron α, bins y ε (D-18), pero no estos dos. Si el modelo entregado usa Q₀ = −100, las figuras que justifican su discretización tienen que salir de corridas con Q₀ = −100. Si no, en la defensa queda la pregunta "¿por qué estos rangos, si los elegiste con otra inicialización?".
+- **Decisión:** dos barridos nuevos en `sweep.py`, sobre la configuración final de Q-Learning (`FINAL_PES`: Q₀ = −100, bins (6, 6, 10, 10), α = 0.5, γ = 0.99, ε de 1 a 0.01 con decay 0.999, 10 000 episodios), con las **mismas variantes** que los originales:
+  - `pes_rangos`: teórico (12.6 / 28.3), mitad (6.3 / 14.1, la elegida), agente entrenado (5 / 10) y agente al azar (3.4 / 5.9).
+  - `pes_representacion`: ángulos (6, 6, 10, 10) = 3600 celdas, contra cos/sin con 4, 6 y 10 bins por dimensión (4096, 46 656 y 10⁶ celdas). La comparación más justa es con `crudo_4`, que tiene casi el mismo tamaño de tabla.
+- **Verificación:** la variante que coincide con `FINAL_PES` (mitad y ángulos) repite **exactamente** `pes_epsilon` (`decay0.999_min0.01`): 259.47 ± 29.61 pasos, 99.4 % de éxito y 368.34 pasos en la curva, en los dos barridos.
+- **Tiempo:** 40 corridas en dos lotes de 10 procesos, unos 70 minutos en total. Las corridas que no aprenden tardan más (`crudo_6` y `crudo_10`, unos 1450 s cada una).
+- **Resultados, representación** (`pes_representacion`, 5 semillas):
+
+  | Variante | Celdas | Pasos finales | Éxito | Pasos en la curva |
+  |---|---|---|---|---|
+  | **Ángulos (6, 6, 10, 10)** | 3600 | **259.5 ± 29.6** | **99 %** | **368.3 ± 16.4** |
+  | cos/sin, 4 bins | 4096 | 319.2 ± 63.6 | 97 % ± 3 % | 472.9 ± 11.6 |
+  | cos/sin, 6 bins | 46 656 | 652.9 ± 33.6 | 22 % ± 14 % | 670.1 ± 6.5 |
+  | cos/sin, 10 bins | 10⁶ | 695.3 ± 2.7 | 2 % ± 1 % | 697.7 ± 0.8 |
+
+  **Se confirma D-06 con Q₀ = −100, y con más diferencia que con Q₀ = 0.** A igual tamaño de tabla (`crudo_4`), los ángulos aprenden más rápido (368 contra 473 en la curva) y terminan mejor. Las tablas grandes de cos/sin directamente no aprenden: con inicialización pesimista, el valor del objetivo se tiene que propagar celda por celda, y con 46 656 o 10⁶ celdas casi ninguna se visita lo suficiente (9 % y 1 %).
+- **Resultados, rangos** (`pes_rangos`, 5 semillas; la última columna promedia las 8 evaluaciones greedy de los últimos 2000 episodios):
+
+  | Variante | Pasos finales | Éxito | Pasos en la curva | Celdas visitadas | Greedy, últimos 2000 |
+  |---|---|---|---|---|---|
+  | Teórico (12.6 / 28.3) | 326.4 ± 185.8 | 82 % ± 30 % | 359.4 ± 13.4 | 15 % | 290 |
+  | Mitad (6.3 / 14.1), la actual | 259.5 ± 29.6 | 99 % | 368.3 ± 16.4 | 37 % | 270 |
+  | **Agente entrenado (5 / 10)** | **212.9 ± 38.8** | **100 %** | 353.2 ± 12.1 | 53 % | **231** |
+  | Agente al azar (3.4 / 5.9) | 286.7 ± 124.1 | 93 % ± 14 % | **309.5 ± 14.2** | 82 % | 239 |
+
+  Por semilla, pasos finales: mitad 286 / 230 / 220 / 267 / 294; 5/10: 178 / 195 / 288 / 208 / 195.
+- **Hallazgo: con Q₀ = −100 cambia el mejor rango.** Con Q₀ = 0 la mitad era la mejor y la más estable (D-12). Con Q₀ = −100:
+  - 5/10 termina mejor en 4 de las 5 semillas, llega en el 100 % de los estados con todas las semillas y es mejor en la evaluación greedy de los últimos 2000 episodios (231 contra 270).
+  - En la curva de entrenamiento empatan dentro del desvío (353 contra 368).
+  - El rango del agente al azar es el que aprende **más rápido** (309 en la curva), pero tiene una semilla que colapsa (532 pasos y 64 % de éxito), igual que con Q₀ = 0.
+  - **Interpretación:** con Q₀ = 0 el agente explora por optimismo y llega a velocidades altas, que un rango estrecho mezcla en el bin extremo. Con Q₀ = −100 el aprendizaje depende de que el valor del objetivo se propague por las celdas que de verdad se visitan, y **más resolución donde está la mayoría de las visitas** (53 % de celdas visitadas contra 37 %) ayuda más que distinguir las velocidades extremas. Es la misma lógica que hizo preferir tablas más chicas en D-18.
+  - Con 5 semillas, la diferencia de los pasos finales (47 pasos, cerca de 1.3 desvíos) es moderada. La de la curva greedy tardía (39 pasos) va en el mismo sentido.
+- **Decisión:** se cambia el rango a 5/10 (D-38).
+- **Evidencia:** `Acrobot/results/summary_pes_rangos.csv`, `summary_pes_representacion.csv`, las corridas `pes_rangos_*` y `pes_representacion_*`, y las figuras `Acrobot/figures/A2_pes_rangos.png` y `A2_pes_representacion.png`.
+
+### D-37: Figuras de Acrobot (`plots.py`)
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Contexto:** el informe necesita figuras claras y comentadas (lo pide la letra), y cada número tiene que poder rastrearse hasta un registro de `results/`.
+- **Decisión** (`python plots.py [A1 A2 A3 A4 A5]`, guarda en `Acrobot/figures/` en PNG a 150 dpi):
+  - **Solo lee `results/`** (los JSON por corrida, los `_episodes.csv` y los `_test.json`). Nunca usa variables en memoria de un notebook. Si una semilla se corrió más de una vez, toma la última.
+  - **Estilo fijo por algoritmo:** Q-Learning con Q₀ = −100 en azul con línea sólida, Dyna-Q en naranja rayada, Q-Learning con Q₀ = 0 en verde agua punteada, Q₀ = −50 en violeta y el agente al azar en gris, en todas las figuras. En los barridos, las variantes toman los colores en orden fijo.
+  - **Paleta validada** para daltonismo en pares adyacentes. Además del color, **cada serie tiene su propio estilo de línea**, para que se lea impresa en blanco y negro. Tres colores tienen poco contraste sobre el fondo blanco, y eso se compensa con la leyenda y con las etiquetas directas.
+  - **Curvas:** media entre semillas de la media móvil de los pasos de entrenamiento (ventana de 1/40 de los episodios, o 500 en las de 40 000), con una banda de ±1 desvío entre semillas cuando hay pocas curvas. En los barridos se omite la banda, para que no se tapen las curvas, y el desvío se muestra en el panel de barras.
+  - **Resultado final:** evaluación greedy sobre los 100 estados fijos (D-09), media ± desvío entre semillas, con la variante elegida en negrita.
+  - **Agente al azar:** la referencia es la de los 1000 estados de prueba (693 pasos, 5.8 % de éxito, D-35), no el −700 de D-05.
+- **Figuras:**
+  - **A1** `A1_curva_modelo_final.png`: `rango_final` / `ql_10000` (D-38; antes, `pes_episodios` con 40 000 episodios). Curva de entrenamiento más los puntos de la evaluación greedy cada 250 episodios.
+  - **A2** `A2_pes_*.png` (Q₀ = −100: α, bins, ε, rangos y representación) y `A2_cero_*.png` (Q₀ = 0: rangos, representación, bins, α, γ y ε). Cada figura dice en el título con qué Q₀ se corrió. Las de rangos y representación con Q₀ = −100 salen de R2 (D-36).
+  - **A3** `A3_inicializacion.png`: a) misma configuración (`inicializacion`), donde con −100 la curva queda plana en 700 (punto fijo, D-17); b) cada una ajustada (`episodios` 20 000 contra `rango_final` / `ql_10000`, D-38), con el resultado del modelo guardado en la prueba.
+  - **A4** `A4_distribucion_prueba.png`: cajas de los pasos en los 1000 estados de prueba de Dyna-Q, Q-Learning con Q₀ = −100, Q-Learning con Q₀ = 0 y el agente al azar, con media, mínimo, máximo y éxito escritos.
+  - **A5** `A5_dyna_n.png` (n = 0 a 50 con α = 0.5, mismo lote, así que los tiempos son comparables) y `A5_qlearning_vs_dynaq.png` (cada uno con su configuración final). Las dos tienen un eje x en episodios y otro en tiempo de reloj (`elapsed_s`, D-21), interpolado a una grilla común hasta la semilla más corta.
+- **Advertencia para el informe** *(resuelta el 2026-11-23, D-38)*: en la primera versión, `A5_qlearning_vs_dynaq` comparaba lotes distintos (`dyna_n` con n = 0 y `dyna_alpha_bajo`), y el tiempo era orientativo. Ahora usa `rango_final`, donde los dos algoritmos corrieron en el mismo lote, así que los tiempos son comparables. `A5_dyna_n` sigue con el rango anterior (la mitad), porque su objetivo es mostrar el efecto de *n*, y el pie de la figura lo dice.
+- **Alternativas:** graficar la curva greedy en vez de la de entrenamiento. Se descartó como curva principal porque son 20 estados cada 250 episodios y es muy ruidosa (D-09). En A1 se muestra como puntos, para que se vea la diferencia entre lo que hace el agente explorando y lo que aprendió.
+- **Evidencia:** `Acrobot/figures/`.
+
+### D-38: Rango 5/10 y 10 000 episodios para la configuración final
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente · **Reemplaza** a D-12 (rango) para Q₀ = −100. Cambia el rango, los episodios y el modelo de D-18, y el rango y el modelo de D-25.
+- **Contexto:** al repetir el barrido de rangos con Q₀ = −100 (D-36), el rango del agente entrenado (ω1 ∈ ±5, ω2 ∈ ±10) resultó mejor que la mitad de los límites: 213 contra 259 pasos finales, y 100 % de éxito en las 5 semillas. La mitad se había elegido con Q₀ = 0 (D-12).
+- **Decisión 1: rango 5/10** en `DEFAULT_CONFIG` y `DYNAQ_CONFIG` (`train.py`). El resto de la configuración no cambia: ángulos, bins (6, 6, 10, 10), Q₀ = −100, γ = 0.99, ε de 1 a 0.01 con decay 0.999, α = 0.5 para Q-Learning, y n = 2 con α = 0.05 para Dyna-Q.
+- **Verificación** (`python sweep.py rango_final`, 15 corridas con 10 procesos):
+
+  | Variante | Pasos finales | Éxito | Pasos en la curva | Tiempo (lote) |
+  |---|---|---|---|---|
+  | Q-Learning, 10 000 episodios | 212.9 ± 38.8 | 100 % | 353.2 ± 12.1 | 716 s |
+  | **Dyna-Q, 10 000 episodios** | **163.4 ± 19.1** | **100 %** | **158.6 ± 6.2** | **428 s** |
+  | Q-Learning, 40 000 episodios | 288.4 ± 146.7 | 90 % ± 20 % | 253.3 ± 1.9 | 1530 s |
+
+  - `ql_10000` repite **exactamente** `pes_rangos / entrenado_5_10`, semilla por semilla.
+  - **Dyna-Q también mejora con 5/10:** 163.4 ± 19.1 contra 169.5 ± 11.5 en los pasos finales con la mitad (D-25), y 158.6 contra 172.5 en la curva. El rango elegido para Q-Learning le sirve también a Dyna-Q, y la comparación sigue siendo limpia: mismos estados y misma exploración.
+- **Hallazgo: con 40 000 episodios, la foto final puede caer en una oscilación.**
+  - El modelo de Q-Learning con 40 000 episodios (semilla 0, `qlearning_final_rango_20261123-210910_f304.pkl`) terminó con **583.5 pasos y 51 % de éxito** en la prueba.
+  - Su evaluación greedy venía estable cerca de 200 pasos (179, 171, … 234) y salta a 547 justo en la última evaluación, la del episodio 40 000.
+  - Es la oscilación de α constante (α = 0.5) ya vista en D-15: una sola actualización puede cambiar la acción greedy en estados clave y hacer que el péndulo quede dando vueltas.
+  - Con la mitad del rango, la misma semilla tuvo un salto parecido (589) a mitad del entrenamiento, pero no cayó en la última foto. Las otras 4 semillas de 40 000 terminan entre 176 y 238 pasos.
+- **Decisión 2: 10 000 episodios para Q-Learning.**
+  - Con 5/10, pasar de 10 000 a 40 000 episodios casi no mejora: la evaluación greedy de los últimos 2000 episodios pasa de unos 231 a unos 200 pasos. A cambio, cuadruplica el tiempo y la cantidad de fotos en las que puede colapsar.
+  - Con 10 000 episodios, las 5 semillas llegan al 100 % de éxito y el desvío es menor.
+  - Q-Learning y Dyna-Q quedan comparados con el mismo presupuesto, 10 000 episodios cada uno.
+  - La elección se basa en la media de las 5 semillas, no en la foto de la semilla 0. Los modelos se entrenan siempre con la semilla 0.
+- **Alternativas descartadas:**
+  - Mantener 40 000 episodios y entregar el modelo de 51 %, o elegir otra semilla. Elegir la semilla por su resultado sería elegirlo a dedo.
+  - Guardar la mejor foto según la evaluación greedy (*checkpoint*). Es una práctica estándar, pero agrega un mecanismo que el curso no vio, y con 20 estados por evaluación la elección es ruidosa.
+  - Una α decreciente, que reduciría la oscilación. Es otro hiperparámetro para ajustar, y el resultado con 10 000 episodios ya es bueno.
+- **Modelos entregados** (1000 estados de prueba; entrenamiento con un solo proceso):
+
+  | Modelo | Algoritmo | Episodios | Entrenamiento | Pasos | Mín. / Máx. | Éxito |
+  |---|---|---|---|---|---|---|
+  | **`qlearning_final_rango10k_20261123-211904_5a2f.pkl`** | Q-Learning, α = 0.5 | 10 000 | **294 s** | **172.0** | 86 / 700 | 99.9 % |
+  | **`dynaq_final_rango_20261123-211208_4a66.pkl`** | Dyna-Q, n = 2, α = 0.05 | 10 000 | **175 s** | **140.6** | 86 / 700 | 99.9 % |
+  | `qlearning_final_pes_20261120-204635_c4c6.pkl` (anterior, mitad) | Q-Learning | 40 000 | 947 s | 218.2 | 121 / 700 | 99.9 % |
+  | `dynaq_final_20261122-182339_bbc2.pkl` (anterior, mitad) | Dyna-Q | 10 000 | 593 s | 183.2 | 98 / 476 | 100 % |
+  | `qlearning_final_20261120-154018_3f81.pkl` (referencia, Q₀ = 0) | Q-Learning | 20 000 | 303 s | 142.1 | 88 / 700 | 99.6 % |
+
+  Los dos modelos nuevos reproducen exactamente su semilla 0 en `rango_final`: 177.78 y 142.49 pasos en los 100 estados de evaluación.
+- **Lectura:**
+  - **Con Dyna-Q, el costo de cumplir la indicación del docente casi desaparece:** con Q₀ = −100, Dyna-Q (140.6) queda a la par de Q-Learning con Q₀ = 0 (142.1), con poco más de la mitad del tiempo de entrenamiento. Q-Learning con Q₀ = −100 queda en 172.0.
+  - **Dyna-Q entrena más rápido en tiempo de reloj** (175 contra 294 s), aunque hace 3 actualizaciones por paso en vez de 1: aprende antes, y sus episodios se acortan antes. La figura A5 lo muestra en el mismo lote.
+  - **Los dos modelos nuevos fallan en 1 de los 1000 estados de prueba** (llegan a 700), contra 0 del Dyna-Q anterior. El peor caso de Dyna-Q empeora (476 → 700), aunque la media mejora mucho (183 → 141). Hay que decirlo en el informe.
+  - **Para la defensa:** el rango óptimo depende de la inicialización. Con Q₀ = 0, el agente explora por optimismo y llega a velocidades altas, que un rango estrecho mezcla en el bin extremo. Con Q₀ = −100, el valor del objetivo se propaga por las celdas que se visitan, así que conviene más resolución donde está la mayoría de las visitas.
+- **Pendiente:** la medición del *aliasing* de D-23 se hizo con el modelo anterior (la mitad). No cambia la conclusión: con 5/10 las celdas son más finas en las velocidades frecuentes y más gruesas en las extremas, y el modelo determinista sigue siendo inexacto. Si el informe necesita el número actualizado, se puede repetir con `python aliasing.py models/dynaq_final_rango_20261123-211208_4a66.pkl`.
+- **Evidencia:** `Acrobot/results/summary_rango_final.csv`, las corridas `rango_final_*`, los `_test.json` de los cinco modelos y las figuras A1, A3, A4 y `A5_qlearning_vs_dynaq` regeneradas.

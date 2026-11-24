@@ -1,0 +1,5 @@
+variant,n_seeds,n_states,mean_steps_mean,mean_steps_std,success_rate_mean,success_rate_std,curve_mean_steps_mean,curve_mean_steps_std,visited_states_mean,visited_states_std,train_time_s_mean,train_time_s_std,learn_time_s_mean,learn_time_s_std
+teorico_12.6_28.3,5,3600,326.388,185.786,0.824,0.299,359.41,13.448,0.148,0.003,879.918,10.477,815.906,9.428
+mitad_6.3_14.1,5,3600,259.47,29.607,0.994,0.005,368.34,16.429,0.367,0.004,872.392,16.748,808.174,15.32
+entrenado_5_10,5,3600,212.89,38.829,1.0,0.0,353.21,12.05,0.53,0.01,734.888,20.323,680.756,19.914
+azar_3.4_5.9,5,3600,286.652,124.065,0.928,0.144,309.457,14.155,0.815,0.004,685.206,13.11,636.584,11.378

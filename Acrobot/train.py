@@ -5,7 +5,7 @@
 - Al final hace una evaluación greedy más larga, que es la métrica para comparar corridas.
 - Guarda la corrida en results/ y, si se pide, el modelo en models/.
 
-Uso: python train.py --save-model                    (Q-Learning, configuración final, D-18)
+Uso: python train.py --save-model                    (Q-Learning, configuración final, D-18 y D-38)
      python train.py --algorithm dynaq --save-model   (Dyna-Q, configuración final, D-25)
      python train.py --episodes 3000 --bins 10 --alpha 0.2 --tag prueba
      python train.py --algorithm dynaq --n-planning 10 --episodes 3000
@@ -37,20 +37,23 @@ DEFAULT_CONFIG = {
     "seed": 0,
     # Configuración final (DECISIONES.md): q_init = -100 = -1/(1-γ), inicialización pesimista
     # por indicación del docente (D-17); el resto, re-ajustado para esa inicialización (D-18).
-    "episodes": 40000,
+    # 10000 episodios (D-38): con el rango 5/10, 40000 casi no mejora y multiplica las
+    # oportunidades de que la foto final caiga en una oscilación de α constante.
+    "episodes": 10000,
     "max_steps": 700,
-    # Ángulos, bins (θ1, θ2, ω1, ω2) = (6, 6, 10, 10) y velocidades en la mitad de los
-    # límites del entorno (D-06, D-12 y D-18).
+    # Ángulos y bins (θ1, θ2, ω1, ω2) = (6, 6, 10, 10) (D-06 y D-18). Velocidades en ±5 y ±10,
+    # el rango que alcanza el agente entrenado: con Q0 = -100 es mejor que la mitad de los
+    # límites, que se había elegido con Q0 = 0 (D-36 y D-38, que reemplaza a D-12).
     "discretization": {"representation": "angles", "bins": [6, 6, 10, 10],
-                       "omega1_max": OMEGA1_MAX / 2, "omega2_max": OMEGA2_MAX / 2},
+                       "omega1_max": 5.0, "omega2_max": 10.0},
     "agent": {"alpha": 0.5, "gamma": 0.99, "epsilon_start": 1.0,
               "epsilon_min": 0.01, "epsilon_decay": 0.999, "q_init": -100.0},
     "eval": {"every": 250, "episodes": 20, "final_episodes": 100},
 }
 
 
-# Configuración final de Dyna-Q (D-25): la misma discretización y exploración que Q-Learning,
-# con n = 2 pasos de planning, α = 0.05 y 10000 episodios.
+# Configuración final de Dyna-Q (D-25, con el rango de D-38): la misma discretización y
+# exploración que Q-Learning, con n = 2 pasos de planning, α = 0.05 y 10000 episodios.
 DYNAQ_CONFIG = copy.deepcopy(DEFAULT_CONFIG)
 DYNAQ_CONFIG["algorithm"] = "dynaq"
 DYNAQ_CONFIG["episodes"] = 10000
@@ -81,14 +84,17 @@ def run_episode(env, agent, discretizer, learn, seed=None):
     return total, steps, terminated, velocities
 
 
-def evaluate(env, agent, discretizer, n_episodes, seed_base=EVAL_SEED_BASE):
-    """Evalúa la política greedy sobre n_episodes estados iniciales fijos."""
+def evaluate(env, agent, discretizer, n_episodes, seed_base=EVAL_SEED_BASE, per_episode=False):
+    """Evalúa la política greedy sobre n_episodes estados iniciales fijos.
+    Con per_episode=True agrega mínimo, máximo y los pasos y el éxito de cada estado
+    (para la distribución de la prueba, D-35). Durante el entrenamiento no se usa,
+    para no agrandar los JSON."""
     results = [run_episode(env, agent, discretizer, learn=False, seed=seed_base + i)
                for i in range(n_episodes)]
     steps = np.array([r[1] for r in results])
     success = np.array([r[2] for r in results])
     velocities = np.concatenate([r[3] for r in results])
-    return {
+    metrics = {
         "mean_reward": float(np.mean([r[0] for r in results])),
         "mean_steps": float(steps.mean()),
         "std_steps": float(steps.std()),
@@ -98,6 +104,14 @@ def evaluate(env, agent, discretizer, n_episodes, seed_base=EVAL_SEED_BASE):
         "omega1_abs_p99": float(np.percentile(np.abs(velocities[:, 0]), 99)),
         "omega2_abs_p99": float(np.percentile(np.abs(velocities[:, 1]), 99)),
     }
+    if per_episode:
+        metrics.update({
+            "min_steps": int(steps.min()),
+            "max_steps": int(steps.max()),
+            "steps_per_episode": steps.tolist(),
+            "success_per_episode": success.astype(int).tolist(),
+        })
+    return metrics
 
 
 def build(config):

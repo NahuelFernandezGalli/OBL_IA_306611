@@ -75,6 +75,10 @@ FINAL_PES = merge(CHOSEN_DISC, merge(disc(bins=[6, 6, 10, 10]), merge(
     agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, epsilon_min=0.01, q_init=-100.0), {"episodes": 10000})))
 
 
+# FINAL_PES con el rango de velocidades del agente entrenado (5 / 10), D-38.
+FINAL_RANGO = merge(FINAL_PES, disc(omega1_max=5.0, omega2_max=10.0))
+
+
 def dyna(n, **overrides):
     """Dyna-Q con n pasos de planning sobre FINAL_PES, más otros cambios."""
     return merge(FINAL_PES, merge({"algorithm": "dynaq", "agent": {"n_planning": n}}, overrides))
@@ -183,6 +187,33 @@ EXPERIMENTS = {
         (str(n), merge(CHOSEN_DISC, merge(disc(bins=[6, 6, 10, 10]), merge(
             agent(alpha=0.5, gamma=0.99, epsilon_decay=0.999, epsilon_min=0.01, q_init=-100.0), {"episodes": n}))))
         for n in [20000, 40000]
+    ],
+    # R2 (fase 4, D-36): rangos y representación se habían elegido con Q0 = 0 (D-12, D-13).
+    # Se repiten con la configuración final de Q0 = -100 (FINAL_PES), con las mismas variantes,
+    # para que todos los barridos sean consistentes con el modelo entregado. La variante que
+    # coincide con FINAL_PES tiene que repetir exactamente pes_epsilon (decay0.999_min0.01).
+    "pes_rangos": [
+        ("teorico_12.6_28.3", merge(FINAL_PES, disc(omega1_max=OMEGA1_MAX, omega2_max=OMEGA2_MAX))),
+        ("mitad_6.3_14.1", FINAL_PES),
+        ("entrenado_5_10", merge(FINAL_PES, disc(omega1_max=5.0, omega2_max=10.0))),
+        ("azar_3.4_5.9", merge(FINAL_PES, disc(omega1_max=3.4, omega2_max=5.9))),
+    ],
+    # "crudo" discretiza las 6 componentes; crudo_4 (4096 celdas) tiene casi el mismo tamaño
+    # que la tabla de ángulos final (3600), así que es la comparación más justa.
+    "pes_representacion": [
+        ("angulos_6_6_10_10", FINAL_PES),
+        ("crudo_4", merge(FINAL_PES, disc(representation="raw", bins=4))),
+        ("crudo_6", merge(FINAL_PES, disc(representation="raw", bins=6))),
+        ("crudo_10", merge(FINAL_PES, disc(representation="raw", bins=10))),
+    ],
+    # Configuración final con el rango 5/10 (D-38), elegido en pes_rangos. Q-Learning y Dyna-Q
+    # (n = 2, α = 0.05) en el mismo lote, para que los tiempos de reloj sean comparables (figura
+    # A5), y Q-Learning con 40000 episodios para la curva del modelo final (A1). ql_10000 tiene que
+    # repetir exactamente pes_rangos / entrenado_5_10.
+    "rango_final": [
+        ("ql_10000", FINAL_RANGO),
+        ("dynaq_10000", merge(FINAL_RANGO, {"algorithm": "dynaq", "agent": {"n_planning": 2, "alpha": 0.05}})),
+        ("ql_40000", merge(FINAL_RANGO, {"episodes": 40000})),
     ],
     # Dyna-Q (fase 2, D-20 y D-21): pasos de planning n, sobre la configuración final de
     # Q-Learning (Q0 = -100) y el mismo presupuesto de 10000 episodios que los barridos pes_*.
