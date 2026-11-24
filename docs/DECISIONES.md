@@ -50,6 +50,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-36](#d-36-rangos-y-representación-repetidos-con-q₀--100) | Acrobot | Rangos y representación repetidos con Q₀ = −100 | Vigente (llevó a D-38) |
 | [D-37](#d-37-figuras-de-acrobot-plotspy) | Acrobot | Figuras de Acrobot (`plots.py`) | Vigente |
 | [D-38](#d-38-rango-510-y-10-000-episodios-para-la-configuración-final) | Acrobot | Rango 5/10 y 10 000 episodios para la configuración final; modelos nuevos | Vigente |
+| [D-39](#d-39-figuras-de-connect-four-plotspy) | Connect Four | Figuras de Connect Four (`plots.py`) | Vigente |
 
 ---
 
@@ -1003,3 +1004,18 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - **Para la defensa:** el rango óptimo depende de la inicialización. Con Q₀ = 0, el agente explora por optimismo y llega a velocidades altas, que un rango estrecho mezcla en el bin extremo. Con Q₀ = −100, el valor del objetivo se propaga por las celdas que se visitan, así que conviene más resolución donde está la mayoría de las visitas.
 - **Pendiente:** la medición del *aliasing* de D-23 se hizo con el modelo anterior (la mitad). No cambia la conclusión: con 5/10 las celdas son más finas en las velocidades frecuentes y más gruesas en las extremas, y el modelo determinista sigue siendo inexacto. Si el informe necesita el número actualizado, se puede repetir con `python aliasing.py models/dynaq_final_rango_20261123-211208_4a66.pkl`.
 - **Evidencia:** `Acrobot/results/summary_rango_final.csv`, las corridas `rango_final_*`, los `_test.json` de los cinco modelos y las figuras A1, A3, A4 y `A5_qlearning_vs_dynaq` regeneradas.
+
+### D-39: Figuras de Connect Four (`plots.py`)
+
+- **Fecha:** 2026-11-23 · **Estado:** Vigente
+- **Decisión** (`python plots.py [C1 C2 C3 C4]`, guarda en `ConnectFour/figures/` en PNG a 150 dpi):
+  - Lee solo `results/`: los `summary_*.csv` y `summary_*_por_apertura.csv` que escribe `experiments.py`, y `runs.csv` para el tiempo de la peor jugada.
+  - Tiene el mismo estilo y la misma paleta que `Acrobot/plots.py` (D-37). Cada variante de búsqueda tiene siempre el mismo color, estilo de línea y marcador.
+  - **Victorias, empates y derrotas** en barras horizontales apiladas: verde, gris y rojo, porque son resultados buenos o malos, con el número escrito dentro del segmento cuando entra. **Siempre se separa si nuestro agente juega primero o segundo**, y se agregan las victorias en las 24 aperturas abiertas, porque en las otras 25 el jugador 1 tiene victoria forzada (D-32).
+- **Figuras:**
+  - **C1** `C1_poda.png`: nodos y tiempo por jugada según la profundidad, **en escala logarítmica**, sin poda y con poda en los dos órdenes, con el b* escrito en d = 7. En una escala log, el crecimiento b^d se ve como una recta cuya pendiente es b*, así que la poda aparece como una pendiente menor. Incluye la verificación: la misma jugada en 350 de 350 búsquedas y 98.4 % menos nodos (D-30).
+  - **C2** `C2_minimax_vs_expectimax.png`: una grilla de 2 × 3 (turno × rival: Random, Stratego(2, 4) y Minimax d5), con Minimax d5, Expectimax d5 y Expectimax d4 en cada panel (D-34).
+  - **C3** `C3_heuristicas.png`: las 10 heurísticas, **solo jugando segundo en las aperturas abiertas**, que es el único caso que las distingue, más el total sobre 49 al costado. El pie aclara que jugando primero ganan 48 o 49 de 49 (D-31).
+  - **C4** `C4_profundidad.png`: a) porcentaje de victorias según d, jugando primero, jugando segundo y jugando segundo en las abiertas; b) tiempo promedio y de la peor jugada (escala log), con d = 5 marcada (D-33).
+- **Alternativas:** porcentajes en vez de cantidades en C2 y C3. Se prefirieron cantidades, porque con 24 o 49 partidas un porcentaje sugiere más precisión de la que hay.
+- **Evidencia:** `ConnectFour/figures/`.
