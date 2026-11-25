@@ -51,6 +51,7 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
 | [D-37](#d-37-figuras-de-acrobot-plotspy) | Acrobot | Figuras de Acrobot (`plots.py`) | Vigente |
 | [D-38](#d-38-rango-510-y-10-000-episodios-para-la-configuración-final) | Acrobot | Rango 5/10 y 10 000 episodios para la configuración final; modelos nuevos | Vigente |
 | [D-39](#d-39-figuras-de-connect-four-plotspy) | Connect Four | Figuras de Connect Four (`plots.py`) | Vigente |
+| [D-40](#d-40-notebooks-de-entrega) | General | Notebooks de entrega: cargan, verifican y muestran, sin volver a entrenar | Vigente |
 
 ---
 
@@ -1019,3 +1020,26 @@ Este documento explica cada decisión técnica del obligatorio: qué se decidió
   - **C4** `C4_profundidad.png`: a) porcentaje de victorias según d, jugando primero, jugando segundo y jugando segundo en las abiertas; b) tiempo promedio y de la peor jugada (escala log), con d = 5 marcada (D-33).
 - **Alternativas:** porcentajes en vez de cantidades en C2 y C3. Se prefirieron cantidades, porque con 24 o 49 partidas un porcentaje sugiere más precisión de la que hay.
 - **Evidencia:** `ConnectFour/figures/`.
+
+### D-40: Notebooks de entrega
+
+- **Fecha:** 2026-11-25 · **Estado:** Vigente
+- **Contexto:** la letra pide entregar `.py` y `.ipynb`. Los notebooks de la cátedra (`Acrobot/agent.ipynb` y `ConnectFour/Connect_four.ipynb`) solo tenían una simulación al azar y una partida a mano.
+- **Decisión:** se reemplazan por notebooks que **cargan y muestran, sin volver a entrenar ni repetir experimentos**, y se entregan **ejecutados**, con las salidas guardadas, para que se puedan leer sin correrlos.
+  - **`agent.ipynb`:**
+    - el entorno y la discretización;
+    - la configuración de los dos modelos entregados, leída del `.pkl`;
+    - la evaluación sobre los 1000 estados de prueba (de los `_test.json`), más una **verificación**: vuelve a jugar los primeros 100 estados y comprueba que los pasos coinciden uno por uno con los registrados, para los dos modelos y el agente al azar;
+    - fotos de un episodio de Dyna-Q;
+    - las figuras A1 a A5, regeneradas con `plots.py` y cada una con su interpretación;
+    - los comandos para reproducir todo.
+  - **`Connect_four.ipynb`:**
+    - el agente final contra `Stratego(2, 4)` en los dos turnos y contra Random, desde el tablero vacío, con el tablero final y los tiempos por jugada;
+    - las figuras C1 a C4, con su interpretación;
+    - la tabla de enfrentamientos de E4 (de los `summary_*.csv`);
+    - los comandos para reproducir todo.
+  - Las celdas originales de la cátedra quedan como anexo, apagadas con un flag (`RENDER` y `JUGAR_A_MANO`), porque abren una ventana o piden entradas por consola y frenarían la ejecución.
+- **Justificación:** volver a entrenar lleva minutos, y las series de partidas de Connect Four también. Si el notebook muestra lo registrado y verifica que el modelo cargado reproduce sus números, el corrector puede confiar en los resultados sin esperar. Las interpretaciones de las figuras sirven además de borrador para el informe.
+- **Cómo se ejecutaron:** con IPython (`InteractiveShell`, que ya trae `ipykernel`), celda por celda, guardando lo que imprimen y las imágenes. No hizo falta instalar `jupyter` ni `nbconvert`. También se pueden abrir y correr normalmente con el kernel `.venv` de cada proyecto: los dos corren completos en menos de un minuto.
+- **Detalle para la defensa:** cuando nuestro agente juega primero contra `Stratego(2, 4)` desde el tablero vacío, gana en 3 jugadas. Es porque Stratego se cree el jugador 1 y juega mal de segundo (D-29), no porque sea un rival trivial. El notebook lo aclara, y remite a C2 para la prueba exigente.
+- **Evidencia:** `Acrobot/agent.ipynb` y `ConnectFour/Connect_four.ipynb`.
